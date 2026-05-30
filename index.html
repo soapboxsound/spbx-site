@@ -29,6 +29,11 @@
     width: 100%; height: 100%;
     pointer-events: none; z-index: 0;
   }
+  #ripple {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
   .frame {
     position: relative; z-index: 2;
     width: 100%; max-width: 680px;
@@ -84,11 +89,12 @@
 </style>
 </head>
 <body>
+<canvas id="ripple"></canvas>
 <canvas id="spectrum"></canvas>
 <div class="frame">
   <div class="logo"><img src="Logo_White.png" alt="SPBX Sound" /></div>
   <h1 class="headline">Sound with<br /><em>intention.</em></h1>
-  <p class="curator">Jeff Fiorello | Curator of Vibe</p>
+  <p class="curator">Jeff Fiorello - Curator of Vibe</p>
   <div class="rule"></div>
   <p class="manifesto">Music supervision &amp; development.</p>
   <a class="cta" href="mailto:hi@spbxsound.com">Get In Touch</a>
@@ -98,16 +104,63 @@
   <span id="micLabel">Activate Mic</span>
 </button>
 <script>
+const rippleCanvas = document.getElementById('ripple');
+const rCtx = rippleCanvas.getContext('2d');
 const canvas = document.getElementById('spectrum');
 const ctx = canvas.getContext('2d');
 const micBtn = document.getElementById('micBtn');
 const micLabel = document.getElementById('micLabel');
 let analyser, dataArray, animId, active = false, idlePhase = 0;
- 
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+function resize() {
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  rippleCanvas.width = window.innerWidth; rippleCanvas.height = window.innerHeight;
+}
 resize();
 window.addEventListener('resize', resize);
- 
+
+// Ripple background
+const drops = [];
+const NUM_DROPS = 6;
+for (let i = 0; i < NUM_DROPS; i++) {
+  drops.push({
+    x: Math.random() * 0.6 + 0.3,
+    y: Math.random() * 0.5,
+    r: Math.random() * 80 + 20,
+    maxR: Math.random() * 280 + 120,
+    alpha: 0,
+    speed: Math.random() * 0.003 + 0.002,
+    delay: Math.random() * 8000
+  });
+}
+let rippleStart = null;
+function drawRipple(ts) {
+  requestAnimationFrame(drawRipple);
+  if (!rippleStart) rippleStart = ts;
+  const elapsed = ts - rippleStart;
+  const W = rippleCanvas.width, H = rippleCanvas.height;
+  rCtx.clearRect(0, 0, W, H);
+  for (const d of drops) {
+    const t = ((elapsed - d.delay) % 9000) / 9000;
+    if (t < 0) continue;
+    const r = t * d.maxR;
+    const alpha = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+    rCtx.beginPath();
+    rCtx.arc(d.x * W, d.y * H, r, 0, Math.PI * 2);
+    rCtx.strokeStyle = `rgba(201,168,76,${alpha * 0.07})`;
+    rCtx.lineWidth = 1.5;
+    rCtx.stroke();
+    if (r > 30) {
+      rCtx.beginPath();
+      rCtx.arc(d.x * W, d.y * H, r * 0.65, 0, Math.PI * 2);
+      rCtx.strokeStyle = `rgba(201,168,76,${alpha * 0.04})`;
+      rCtx.lineWidth = 1;
+      rCtx.stroke();
+    }
+  }
+}
+requestAnimationFrame(drawRipple);
+
 function drawIdle() {
   animId = requestAnimationFrame(drawIdle);
   idlePhase += 0.022;
@@ -122,7 +175,7 @@ function drawIdle() {
     ctx.fillRect(i * barW + barW * 0.15, centerY - h, barW * 0.55, h * 2);
   }
 }
- 
+
 function drawLive() {
   animId = requestAnimationFrame(drawLive);
   analyser.getByteFrequencyData(dataArray);
@@ -140,7 +193,7 @@ function drawLive() {
     ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h * 2);
   }
 }
- 
+
 micBtn.addEventListener('click', async () => {
   if (active) {
     active = false;
@@ -165,7 +218,7 @@ micBtn.addEventListener('click', async () => {
     drawLive();
   } catch(e) { micLabel.textContent = 'No mic access'; }
 });
- 
+
 drawIdle();
 </script>
 </body>
