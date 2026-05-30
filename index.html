@@ -360,6 +360,13 @@ drawIdle();
 const seqOverlay = document.getElementById('seqOverlay');
 
 const PATTERNS = {
+  'SPBX Sound': [
+    [1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,0],
+    [1,0,0,0,1,0,1,0,1,0,1,0,1,0,1,0],
+    [1,1,1,0,1,1,1,0,1,1,1,0,0,1,0,0],
+    [0,0,1,0,1,0,0,0,1,0,1,0,1,0,1,0],
+    [1,1,1,0,1,0,0,0,1,1,1,0,1,0,1,0],
+  ],
   'Classic 808': [
     [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
     [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
@@ -545,10 +552,15 @@ function closeSeq() { stopSeq(); seqOverlay.classList.remove('open'); }
 function loadPattern(idx) {
   currentPattern = idx;
   const name = PATTERN_NAMES[idx];
-  grid = PATTERNS[name].map(row => row.map(Boolean));
+  const pat = PATTERNS[name];
+  for (let ti = 0; ti < TRACKS.length; ti++) {
+    for (let si = 0; si < STEPS; si++) {
+      seqGrid[ti][si] = pat[ti][si] === 1;
+    }
+  }
   document.querySelectorAll('.seq-pad').forEach(p => {
     const ti = parseInt(p.dataset.track), si = parseInt(p.dataset.step);
-    p.classList.toggle('active', grid[ti][si]);
+    p.classList.toggle('active', seqGrid[ti][si]);
   });
   document.querySelectorAll('.pat-btn').forEach((b,i) => b.classList.toggle('current', i===idx));
   if (seqPlaying) { stopSeq(); startSeq(); }
@@ -567,7 +579,7 @@ PATTERN_NAMES.forEach((name, idx) => {
 loadPattern(0);
 
 seqPlayBtn.addEventListener('click', () => { seqPlaying ? stopSeq() : startSeq(); });
-seqClearBtn.addEventListener('click', () => { stopSeq(); seqGrid=TRACKS.map(()=>Array(STEPS).fill(false)); document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
+seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
 document.getElementById('seqClose').addEventListener('click', closeSeq);
 seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq(); } });
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeSeq(); });
