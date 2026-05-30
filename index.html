@@ -28,8 +28,8 @@
     --off-white: #F0EDE6;
     --near-black: #0D0D0D;
     --dim: rgba(240,237,230,0.38);
-    --sage: #4A7A46;
-    --sage-dim: rgba(74,122,70,0.35);
+    --sage: #5B7FA6;
+    --sage-dim: rgba(91,127,166,0.35);
   }
   html, body {
     width: 100%; height: 100vh;
@@ -103,7 +103,7 @@
   }
   .mic-btn:hover { border-color: rgba(201,168,76,0.4); }
   .mic-btn.active { border-color: var(--gold); }
-  .mic-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(74,122,70,0.6); transition: background 0.2s; }
+  .mic-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(91,127,166,0.6); transition: background 0.2s; }
   .mic-btn.active .mic-dot { background: var(--gold); animation: pulse 1s ease infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -169,7 +169,7 @@
   .seq-pad.playing { background: #fff; border-color: #fff; }
   .seq-pad.beat-4::after {
     content:''; position:absolute; left:-3px; top:0; bottom:0;
-    width:1px; background: rgba(74,122,70,0.25);
+    width:1px; background: rgba(91,127,166,0.25);
   }
   .seq-controls {
     display: flex; align-items: center; gap: 20px; margin-top: 24px;
@@ -325,6 +325,7 @@ micBtn.addEventListener('click', async () => {
 drawIdle();
 
 // ── 808 Sequencer ───────────────────────────────────────────────────────
+window.addEventListener('load', function() {
 const TRACKS = [
   { name: 'Kick',  type: 'kick'  },
   { name: 'Snare', type: 'snare' },
@@ -336,7 +337,7 @@ const STEPS = 16;
 let seqGrid = TRACKS.map(() => Array(STEPS).fill(false));
 let seqPlaying = false, seqStep = 0, seqInterval = null;
 
-const seqOverlay = document.getElementById('seqOverlay');
+const seqOverlay = document.getElementById('seqOverlay') || document.querySelector('.seq-overlay');
 const seqPlayBtn = document.getElementById('seqPlay');
 const seqClearBtn = document.getElementById('seqClear');
 const seqBpm = document.getElementById('seqBpm');
@@ -552,6 +553,7 @@ const ctaEl=document.querySelector('.cta');
 ctaEl.addEventListener('mouseenter',()=>{ const r=ctaEl.getBoundingClientRect(); spawnWaves(r.left+r.width/2,r.top+r.height/2); });
 ctaEl.addEventListener('click',(e)=>spawnWaves(e.clientX,e.clientY));
 ctaEl.addEventListener('touchstart',(e)=>{ const t=e.touches[0]; spawnWaves(t.clientX,t.clientY); });
+});
 
 </script>
 
