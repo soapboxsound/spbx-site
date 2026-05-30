@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SPBX | Music & Sound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=Geist+Mono:wght@300;400&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #C9A84C;
+    --gold-dim: rgba(201,168,76,0.35);
+    --off-white: #F0EDE6;
+    --near-black: #0D0D0D;
+    --dim: rgba(240,237,230,0.38);
+  }
+  html, body {
+    width: 100%; height: 100vh;
+    background: var(--near-black);
+    color: var(--off-white);
+    font-family: 'Geist Mono', monospace;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  #spectrum {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+  .frame {
+    position: relative; z-index: 2;
+    width: 100%; max-width: 680px;
+    padding: 0 48px;
+    display: flex; flex-direction: column;
+  }
+  .logo { margin-bottom: 52px; animation: fadeUp 0.7s ease both; }
+  .logo img { height: 36px; width: auto; mix-blend-mode: screen; opacity: 0.92; }
+  .headline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(44px, 9vw, 80px);
+    font-weight: 300; line-height: 1.05;
+    letter-spacing: -0.01em; color: var(--off-white);
+    margin-bottom: 10px;
+    animation: fadeUp 0.8s ease both 0.15s;
+  }
+  .headline em { font-style: italic; color: var(--gold); }
+  .curator {
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 52px;
+    animation: fadeUp 0.8s ease both 0.28s;
+  }
+  .rule { width: 40px; height: 1px; background: var(--gold-dim); margin-bottom: 28px; animation: fadeUp 0.8s ease both 0.4s; }
+  .manifesto {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px; font-weight: 300; font-style: italic;
+    line-height: 1.6; letter-spacing: 0.02em; color: var(--dim);
+    margin-bottom: 52px; animation: fadeUp 0.8s ease both 0.5s;
+  }
+  .cta {
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold); text-decoration: none;
+    display: inline-flex; align-items: center; gap: 12px;
+    transition: gap 0.25s; animation: fadeUp 0.8s ease both 0.62s;
+  }
+  .cta::after { content: '→'; font-size: 12px; }
+  .cta:hover { gap: 20px; }
+  .mic-btn {
+    position: fixed; bottom: 36px; right: 40px;
+    background: none; border: 1px solid var(--gold-dim);
+    color: var(--dim); font-family: 'Geist Mono', monospace;
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 10px 18px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: border-color 0.2s, color 0.2s; z-index: 10;
+  }
+  .mic-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .mic-btn.active { border-color: var(--gold); color: var(--gold); }
+  .mic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-dim); transition: background 0.2s; }
+  .mic-btn.active .mic-dot { background: var(--gold); animation: pulse 1s ease infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<canvas id="spectrum"></canvas>
+<div class="frame">
+  <div class="logo"><img src="Logo_White.png" alt="SPBX Sound" /></div>
+  <h1 class="headline">Sound with<br /><em>intention.</em></h1>
+  <p class="curator">Curator of Vibe</p>
+  <div class="rule"></div>
+  <p class="manifesto">Music supervision &amp; development.</p>
+  <a class="cta" href="mailto:hi@spbxsound.com">Get In Touch</a>
+</div>
+<button class="mic-btn" id="micBtn">
+  <span class="mic-dot"></span>
+  <span id="micLabel">Activate Mic</span>
+</button>
+<script>
+const canvas = document.getElementById('spectrum');
+const ctx = canvas.getContext('2d');
+const micBtn = document.getElementById('micBtn');
+const micLabel = document.getElementById('micLabel');
+let analyser, dataArray, animId, active = false, idlePhase = 0;
+let audioCtx, trackSource, trackAnalyser, trackData;
+
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// Silent MP3 driving the meter
+async function startTrack() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const res = await fetch('We_Love_You__Hey__Hi___Edit_.mp3');
+    const buf = await res.arrayBuffer();
+    const decoded = await audioCtx.decodeAudioData(buf);
+    trackSource = audioCtx.createBufferSource();
+    trackSource.buffer = decoded;
+    trackSource.loop = true;
+    trackAnalyser = audioCtx.createAnalyser();
+    trackAnalyser.fftSize = 128;
+    // Connect source -> analyser only (no destination = silent)
+    trackSource.connect(trackAnalyser);
+    trackData = new Uint8Array(trackAnalyser.frequencyBinCount);
+    trackSource.start(0);
+    cancelAnimationFrame(animId);
+    drawTrack();
+  } catch(e) {
+    // Fall back to idle animation if MP3 fails
+    drawIdle();
+  }
+}
+
+function drawTrack() {
+  if (active) return;
+  animId = requestAnimationFrame(drawTrack);
+  trackAnalyser.getByteFrequencyData(trackData);
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const bars = trackData.length, barW = W / bars, centerY = H * 0.82;
+  for (let i = 0; i < bars; i++) {
+    const val = trackData[i] / 255;
+    const h = val * H * 0.35 + 1;
+    const alpha = 0.15 + val * 0.7;
+    const grad = ctx.createLinearGradient(0, centerY, 0, centerY - h);
+    grad.addColorStop(0, `rgba(201,168,76,${alpha})`);
+    grad.addColorStop(1, `rgba(240,220,140,${alpha * 0.6})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h * 2);
+  }
+}
+
+function drawIdle() {
+  animId = requestAnimationFrame(drawIdle);
+  idlePhase += 0.022;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const bars = 80, barW = W / bars, centerY = H * 0.82;
+  for (let i = 0; i < bars; i++) {
+    const t = idlePhase + i * 0.18;
+    const h = (Math.sin(t) * 0.5 + 0.5) * 18 + 2;
+    const alpha = 0.12 + (Math.sin(t + 1) * 0.5 + 0.5) * 0.1;
+    ctx.fillStyle = `rgba(201,168,76,${alpha})`;
+    ctx.fillRect(i * barW + barW * 0.15, centerY - h, barW * 0.55, h * 2);
+  }
+}
+
+function drawLive() {
+  animId = requestAnimationFrame(drawLive);
+  analyser.getByteFrequencyData(dataArray);
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const bars = dataArray.length, barW = W / bars, centerY = H * 0.82;
+  for (let i = 0; i < bars; i++) {
+    const val = dataArray[i] / 255;
+    const h = val * H * 0.35 + 1;
+    const alpha = 0.15 + val * 0.7;
+    const grad = ctx.createLinearGradient(0, centerY, 0, centerY - h);
+    grad.addColorStop(0, `rgba(201,168,76,${alpha})`);
+    grad.addColorStop(1, `rgba(240,220,140,${alpha * 0.6})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h * 2);
+  }
+}
+
+micBtn.addEventListener('click', async () => {
+  if (active) {
+    active = false;
+    cancelAnimationFrame(animId);
+    micBtn.classList.remove('active');
+    micLabel.textContent = 'Activate Mic';
+    if (trackAnalyser) drawTrack(); else drawIdle();
+    return;
+  }
+  try {
+    const micCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const source = micCtx.createMediaStreamSource(stream);
+    analyser = micCtx.createAnalyser();
+    analyser.fftSize = 128;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    cancelAnimationFrame(animId);
+    active = true;
+    micBtn.classList.add('active');
+    micLabel.textContent = 'Listening';
+    drawLive();
+  } catch(e) { micLabel.textContent = 'No mic access'; }
+});
+
+// Browsers require a user gesture before AudioContext can start
+// Start track on first interaction anywhere on the page
+let trackStarted = false;
+document.addEventListener('click', () => {
+  if (!trackStarted) { trackStarted = true; startTrack(); }
+}, { once: true });
+
+// Fallback idle until first click
+drawIdle();
+</script>
+</body>
+</html>
