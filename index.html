@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --gold: #5B7FA6;
-    --warm-gold: #C9A84C;
+    --warm-gold: #A8874A;
     --gold-dim: rgba(91,127,166,0.35);
     --off-white: #F0EDE6;
     --near-black: #0D0D0D;
@@ -80,7 +80,7 @@
   }
   .cta {
     font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--gold); text-decoration: none;
+    color: var(--warm-gold); text-decoration: none;
     display: inline-flex; align-items: center; gap: 12px;
     transition: gap 0.25s; animation: fadeUp 1.1s ease both 1.15s;
     position: relative;
@@ -104,6 +104,18 @@
   @keyframes pageFade { from { opacity: 0; } to { opacity: 1; } }
   body { animation: pageFade 0.6s ease both; }
 
+  .seq-trigger {
+    position: fixed; bottom: 28px; left: 28px;
+    background: none; border: none;
+    width: 16px; height: 16px;
+    cursor: pointer; padding: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .seq-trigger-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(91,127,166,0.25); transition: background 0.3s;
+  }
+  .seq-trigger:hover .seq-trigger-dot { background: rgba(91,127,166,0.7); }
   @media (max-width: 500px) {
     .frame { padding: 0 28px; }
     .headline { font-size: clamp(38px, 12vw, 56px); }
@@ -208,6 +220,7 @@
   <p class="manifesto">Music supervision &amp; development.</p>
   <a class="cta" href="mailto:hi@spbxsound.com">Get In Touch</a>
 </div>
+<button class="seq-trigger" id="seqTrigger" title="Open Sequencer"><span class="seq-trigger-dot"></span></button>
 <button class="mic-btn" id="micBtn" title="Activate Mic">
   <span class="mic-dot"></span>
 </button>
@@ -326,7 +339,7 @@ micBtn.addEventListener('click', async () => {
 drawIdle();
 
 // ── 808 Sequencer ───────────────────────────────────────────────────────
-window.addEventListener('load', function() {
+document.addEventListener('DOMContentLoaded', function() {
 const TRACKS = [
   { name: 'Kick',  type: 'kick'  },
   { name: 'Snare', type: 'snare' },
@@ -516,6 +529,8 @@ seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq()
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeSeq(); });
 
 // ── Triggers ─────────────────────────────────────────────────────────────
+// Visible seq button bottom left
+document.getElementById('seqTrigger').addEventListener('click', openSeq);
 // Konami code
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
 let ki=0;
