@@ -36,7 +36,7 @@
     display: flex; flex-direction: column;
   }
   .logo { margin-bottom: 52px; animation: fadeUp 0.7s ease both; }
-  .logo img { height: 36px; width: auto; mix-blend-mode: screen; opacity: 0.92; }
+  .logo img { height: 64px; width: auto; mix-blend-mode: screen; opacity: 0.92; }
   .headline {
     font-family: 'Cormorant Garamond', serif;
     font-size: clamp(44px, 9vw, 80px);
@@ -103,55 +103,11 @@ const ctx = canvas.getContext('2d');
 const micBtn = document.getElementById('micBtn');
 const micLabel = document.getElementById('micLabel');
 let analyser, dataArray, animId, active = false, idlePhase = 0;
-let audioCtx, trackSource, trackAnalyser, trackData;
-
+ 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener('resize', resize);
-
-// Silent MP3 driving the meter
-async function startTrack() {
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const res = await fetch('We_Love_You__Hey__Hi___Edit_.mp3');
-    const buf = await res.arrayBuffer();
-    const decoded = await audioCtx.decodeAudioData(buf);
-    trackSource = audioCtx.createBufferSource();
-    trackSource.buffer = decoded;
-    trackSource.loop = true;
-    trackAnalyser = audioCtx.createAnalyser();
-    trackAnalyser.fftSize = 128;
-    // Connect source -> analyser only (no destination = silent)
-    trackSource.connect(trackAnalyser);
-    trackData = new Uint8Array(trackAnalyser.frequencyBinCount);
-    trackSource.start(0);
-    cancelAnimationFrame(animId);
-    drawTrack();
-  } catch(e) {
-    // Fall back to idle animation if MP3 fails
-    drawIdle();
-  }
-}
-
-function drawTrack() {
-  if (active) return;
-  animId = requestAnimationFrame(drawTrack);
-  trackAnalyser.getByteFrequencyData(trackData);
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  const bars = trackData.length, barW = W / bars, centerY = H * 0.82;
-  for (let i = 0; i < bars; i++) {
-    const val = trackData[i] / 255;
-    const h = val * H * 0.35 + 1;
-    const alpha = 0.15 + val * 0.7;
-    const grad = ctx.createLinearGradient(0, centerY, 0, centerY - h);
-    grad.addColorStop(0, `rgba(201,168,76,${alpha})`);
-    grad.addColorStop(1, `rgba(240,220,140,${alpha * 0.6})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h * 2);
-  }
-}
-
+ 
 function drawIdle() {
   animId = requestAnimationFrame(drawIdle);
   idlePhase += 0.022;
@@ -166,7 +122,7 @@ function drawIdle() {
     ctx.fillRect(i * barW + barW * 0.15, centerY - h, barW * 0.55, h * 2);
   }
 }
-
+ 
 function drawLive() {
   animId = requestAnimationFrame(drawLive);
   analyser.getByteFrequencyData(dataArray);
@@ -184,21 +140,21 @@ function drawLive() {
     ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h * 2);
   }
 }
-
+ 
 micBtn.addEventListener('click', async () => {
   if (active) {
     active = false;
     cancelAnimationFrame(animId);
     micBtn.classList.remove('active');
     micLabel.textContent = 'Activate Mic';
-    if (trackAnalyser) drawTrack(); else drawIdle();
+    drawIdle();
     return;
   }
   try {
-    const micCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const source = micCtx.createMediaStreamSource(stream);
-    analyser = micCtx.createAnalyser();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
     analyser.fftSize = 128;
     source.connect(analyser);
     dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -209,15 +165,7 @@ micBtn.addEventListener('click', async () => {
     drawLive();
   } catch(e) { micLabel.textContent = 'No mic access'; }
 });
-
-// Browsers require a user gesture before AudioContext can start
-// Start track on first interaction anywhere on the page
-let trackStarted = false;
-document.addEventListener('click', () => {
-  if (!trackStarted) { trackStarted = true; startTrack(); }
-}, { once: true });
-
-// Fallback idle until first click
+ 
 drawIdle();
 </script>
 </body>
