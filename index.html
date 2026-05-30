@@ -235,8 +235,8 @@
   <p class="manifesto">Music supervision &amp; development.</p>
   <a class="cta" href="mailto:hi@spbxsound.com">Get In Touch</a>
 </div>
-<a class="nav-dot nav-dot-left" href="https://mixer.spbxsound.com/" title="Mixer" target="_blank"><span class="nav-dot-inner"></span></a>
-<a class="nav-dot nav-dot-right" href="https://review.spbxsound.com/" title="Review" target="_blank"><span class="nav-dot-inner"></span></a>
+<!-- <a class="nav-dot nav-dot-left" href="https://mixer.spbxsound.com/" title="Mixer" target="_blank"><span class="nav-dot-inner"></span></a> -->
+<!-- <a class="nav-dot nav-dot-right" href="https://review.spbxsound.com/" title="Review" target="_blank"><span class="nav-dot-inner"></span></a> -->
 <button class="seq-trigger" id="seqTrigger" title="Open Sequencer"><span class="seq-trigger-dot"></span></button>
 <button class="mic-btn" id="micBtn" title="Activate Mic">
   <span class="mic-dot"></span>
@@ -482,6 +482,7 @@ function getSeqCtx() {
     seqAnalyser.connect(seqAudioCtx.destination);
     seqData = new Uint8Array(seqAnalyser.frequencyBinCount);
   }
+  if (seqAudioCtx.state === 'suspended') seqAudioCtx.resume();
   return seqAudioCtx;
 }
 function out(ctx) { return seqMaster || ctx.destination; }
@@ -616,7 +617,10 @@ PATTERN_NAMES.forEach((name, idx) => {
 // Load first pattern into pads on init
 loadPattern(0);
 
-seqPlayBtn.addEventListener('click', () => { seqPlaying ? stopSeq() : startSeq(); });
+seqPlayBtn.addEventListener('click', () => {
+  if (seqAudioCtx && seqAudioCtx.state === 'suspended') seqAudioCtx.resume();
+  seqPlaying ? stopSeq() : startSeq();
+});
 seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
 document.getElementById('seqClose').addEventListener('click', closeSeq);
 seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq(); } });
