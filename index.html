@@ -195,6 +195,9 @@
     position: relative;
   }
   .seq-pad.active { background: var(--gold); border-color: var(--gold); }
+  .seq-pad.melodic.active { background: #A8874A !important; border-color: #A8874A !important; }
+  .seq-pad.melodic { background: #1a1410; border-color: #2a2018; }
+  .seq-label.melodic { color: #A8874A !important; }
   .seq-pad.playing { background: #fff; border-color: #fff; }
   .seq-pad.beat-4::after {
     content:''; position:absolute; left:-3px; top:0; bottom:0;
@@ -245,7 +248,10 @@
 <div class="seq-overlay" id="seqOverlay">
   <div class="seq-panel">
     <button class="seq-close" id="seqClose">ESC / CLOSE</button>
-    <div class="seq-title">808 Sequencer</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div class="seq-title" style="margin-bottom:0;">808 Sequencer</div>
+      <img src="Logo_White.png" alt="SPBX" style="height:18px;width:auto;mix-blend-mode:screen;opacity:0.7;" />
+    </div>
     <div id="patternBtns" style="display:flex;gap:8px;margin-bottom:20px;"></div>
     <div id="seqRows"></div>
     <div class="seq-controls">
@@ -255,6 +261,7 @@
         <span class="seq-bpm-label">BPM</span>
         <input class="seq-bpm" id="seqBpm" type="number" value="90" min="40" max="200" />
       </div>
+
     </div>
   </div>
 </div>
@@ -383,6 +390,8 @@ const PATTERNS = {
     [1,1,1,0,1,1,1,0,1,1,1,0,0,1,0,0],
     [0,0,1,0,1,0,0,0,1,0,1,0,1,0,1,0],
     [1,1,1,0,1,0,0,0,1,1,1,0,1,0,1,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
   ],
   'Classic 808': [
     [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
@@ -390,6 +399,8 @@ const PATTERNS = {
     [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [1,0,0,1,0,0,1,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
   ],
   'Four-on-floor': [
     [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
@@ -397,6 +408,8 @@ const PATTERNS = {
     [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
     [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1],
     [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
   ],
   'Boom Bap': [
     [1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0],
@@ -404,6 +417,8 @@ const PATTERNS = {
     [1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0],
     [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
     [1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
   ],
   'Trap': [
     [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0],
@@ -411,6 +426,17 @@ const PATTERNS = {
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,1,0,0,0,1,0,0,1,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  ],
+  'Reggaeton': [
+    [1,0,0,1,0,0,1,0,1,0,0,1,0,0,1,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+    [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+    [1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
   ],
   'Afrobeat': [
     [1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0],
@@ -418,13 +444,8 @@ const PATTERNS = {
     [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
     [0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0],
     [1,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0],
-  ],
-  'Half-Time': [
-    [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
-    [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    [1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
   ],
 };
 const PATTERN_NAMES = Object.keys(PATTERNS);
@@ -435,7 +456,12 @@ const TRACKS = [
   { name: 'HiHat', type: 'hihat' },
   { name: 'Clap',  type: 'clap'  },
   { name: 'Bass',  type: 'bass'  },
+  { name: 'Arp 1', type: 'arp1'  },
+  { name: 'Arp 2', type: 'arp2'  },
 ];
+// Chord pools — Cm and Fm across 2 octaves
+const ARP_POOL_1 = [130.81,155.56,174.61,195.99,233.08,261.63,311.13,349.23,391.99,466.16];
+const ARP_POOL_2 = [174.61,207.65,233.08,261.63,311.13,349.23,415.30,466.16,523.25,622.25];
 const STEPS = 16;
 let seqGrid = TRACKS.map(() => Array(STEPS).fill(false));
 let seqPlaying = false, seqStep = 0, seqInterval = null;
@@ -447,17 +473,18 @@ const seqBpm = document.getElementById('seqBpm');
 const seqRowsEl = document.getElementById('seqRows');
 
 TRACKS.forEach((track, ti) => {
+  const isMelodic = track.type === 'pluck' || track.type === 'chord';
   const row = document.createElement('div');
   row.className = 'seq-row';
   const label = document.createElement('div');
-  label.className = 'seq-label';
+  label.className = 'seq-label' + (isMelodic ? ' melodic' : '');
   label.textContent = track.name;
   row.appendChild(label);
   const pads = document.createElement('div');
   pads.className = 'seq-pads';
   for (let si = 0; si < STEPS; si++) {
     const pad = document.createElement('div');
-    pad.className = 'seq-pad' + (si % 4 === 0 && si > 0 ? ' beat-4' : '');
+    pad.className = 'seq-pad' + (si % 4 === 0 && si > 0 ? ' beat-4' : '') + (isMelodic ? ' melodic' : '');
     pad.dataset.track = ti; pad.dataset.step = si;
     pad.addEventListener('click', () => {
       seqGrid[ti][si] = !seqGrid[ti][si];
@@ -524,11 +551,54 @@ function playClap(ctx, t) {
   }
 }
 function playBass(ctx, t) {
-  const o=ctx.createOscillator(), g=ctx.createGain();
-  o.type='sawtooth'; o.connect(g); g.connect(out(ctx));
-  o.frequency.setValueAtTime(80,t);
-  g.gain.setValueAtTime(0.4,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
-  o.start(t); o.stop(t+0.2);
+  const o=ctx.createOscillator(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+  o.type='sine'; f.type='lowpass'; f.frequency.value=200;
+  o.connect(f); f.connect(g); g.connect(out(ctx));
+  o.frequency.setValueAtTime(60,t);
+  o.frequency.exponentialRampToValueAtTime(40,t+0.3);
+  g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+  o.start(t); o.stop(t+0.4);
+}
+function playArp(ctx, t, pool, decay) {
+  const freq = pool[Math.floor(Math.random() * pool.length)];
+  const vel = 0.25 + Math.random() * 0.35; // velocity randomization
+  const pan = (Math.random() * 2 - 1) * 0.7; // stereo spread
+
+  // FM synthesis — carrier + modulator
+  const carrier = ctx.createOscillator();
+  const modulator = ctx.createOscillator();
+  const modGain = ctx.createGain();
+  const ampGain = ctx.createGain();
+  const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+
+  carrier.type = 'sine';
+  modulator.type = 'sine';
+  carrier.frequency.setValueAtTime(freq, t);
+  modulator.frequency.setValueAtTime(freq * 2.1, t); // modulator ratio
+  modGain.gain.setValueAtTime(freq * 1.5, t); // modulation depth
+  modGain.gain.exponentialRampToValueAtTime(freq * 0.2, t + decay);
+
+  modulator.connect(modGain);
+  modGain.connect(carrier.frequency);
+  carrier.connect(ampGain);
+
+  if (ctx.createStereoPanner) {
+    ampGain.connect(panner);
+    panner.connect(out(ctx));
+    panner.pan.setValueAtTime(pan, t);
+  } else {
+    ampGain.connect(out(ctx));
+  }
+
+  ampGain.gain.setValueAtTime(vel, t);
+  ampGain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+
+  // Slight pitch glide up on attack
+  carrier.frequency.setValueAtTime(freq * 0.98, t);
+  carrier.frequency.exponentialRampToValueAtTime(freq, t + 0.03);
+
+  modulator.start(t); modulator.stop(t + decay);
+  carrier.start(t); carrier.stop(t + decay);
 }
 function triggerSound(ti, t) {
   const ctx = getSeqCtx();
@@ -538,6 +608,8 @@ function triggerSound(ti, t) {
   if (type==='hihat') playHihat(ctx,t);
   if (type==='clap')  playClap(ctx,t);
   if (type==='bass')  playBass(ctx,t);
+  if (type==='arp1') playArp(ctx,t,ARP_POOL_1,0.25);
+  if (type==='arp2') playArp(ctx,t,ARP_POOL_2,0.5);
 }
 
 function drawSeqMeter() {
@@ -559,7 +631,9 @@ function drawSeqMeter() {
 }
 
 function seqTick() {
-  const ctx=getSeqCtx(), now=ctx.currentTime;
+  const ctx=getSeqCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  const now=ctx.currentTime + 0.1; // lookahead buffer for mobile
   const prev=(seqStep-1+STEPS)%STEPS;
   TRACKS.forEach((_,ti) => { const p=getPad(ti,prev); if(p) p.classList.remove('playing'); });
   TRACKS.forEach((_,ti) => {
@@ -573,8 +647,16 @@ function startSeq() {
   const bpm=parseInt(seqBpm.value)||90;
   const ms=(60/bpm/4)*1000;
   seqPlaying=true; seqPlayBtn.textContent='Stop'; seqPlayBtn.classList.add('playing');
-  if (!active) { cancelAnimationFrame(animId); getSeqCtx(); drawSeqMeter(); }
-  seqTick(); seqInterval=setInterval(seqTick,ms);
+  // Always create a fresh AudioContext if needed — iOS requires this inside a tap handler
+  if (!seqAudioCtx || seqAudioCtx.state === 'closed') {
+    seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
+  }
+  const ctx = getSeqCtx();
+  const go = () => {
+    if (!active) { cancelAnimationFrame(animId); drawSeqMeter(); }
+    seqTick(); seqInterval=setInterval(seqTick,ms);
+  };
+  if (ctx.state === 'suspended') { ctx.resume().then(go); } else { go(); }
 }
 function stopSeq() {
   seqPlaying=false; clearInterval(seqInterval);
@@ -584,7 +666,9 @@ function stopSeq() {
   if (!active) { cancelAnimationFrame(animId); drawIdle(); }
 }
 
-function openSeq() { seqOverlay.classList.add('open'); }
+function openSeq() {
+  seqOverlay.classList.add('open');
+}
 function closeSeq() { stopSeq(); seqOverlay.classList.remove('open'); }
 
 // Pattern buttons
@@ -614,8 +698,8 @@ PATTERN_NAMES.forEach((name, idx) => {
   patBtns.appendChild(btn);
 });
 
-// Load first pattern into pads on init
-loadPattern(0);
+// Load first pattern into pads on init — defer to ensure pads are in DOM
+setTimeout(() => loadPattern(0), 0);
 
 seqPlayBtn.addEventListener('click', () => {
   if (seqAudioCtx && seqAudioCtx.state === 'suspended') seqAudioCtx.resume();
@@ -624,9 +708,12 @@ seqPlayBtn.addEventListener('click', () => {
 seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
 document.getElementById('seqClose').addEventListener('click', closeSeq);
 seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq(); } });
+
+
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeSeq(); });
 
 // ── Triggers ─────────────────────────────────────────────────────────────
+
 // Visible seq button bottom left
 document.getElementById('seqTrigger').addEventListener('click', openSeq);
 // Konami code
