@@ -226,19 +226,18 @@ resize();
 window.addEventListener('resize', resize);
 
 // Ripple background
-const drops = [];
-const NUM_DROPS = 6;
-for (let i = 0; i < NUM_DROPS; i++) {
-  drops.push({
-    x: Math.random() * 0.6 + 0.3,
-    y: Math.random() * 0.5,
-    r: Math.random() * 80 + 20,
-    maxR: Math.random() * 280 + 120,
-    alpha: 0,
-    speed: Math.random() * 0.003 + 0.002,
-    delay: Math.random() * 8000
-  });
-}
+const drops = [
+  { x:0.12, y:0.08, maxR:220, delay:0,    sage:false },
+  { x:0.85, y:0.06, maxR:280, delay:1800, sage:true  },
+  { x:0.55, y:0.15, maxR:180, delay:3500, sage:false },
+  { x:0.25, y:0.45, maxR:240, delay:800,  sage:true  },
+  { x:0.78, y:0.55, maxR:200, delay:5000, sage:false },
+  { x:0.92, y:0.30, maxR:160, delay:2600, sage:true  },
+  { x:0.08, y:0.70, maxR:260, delay:4200, sage:false },
+  { x:0.45, y:0.80, maxR:190, delay:1200, sage:true  },
+  { x:0.68, y:0.88, maxR:220, delay:6000, sage:false },
+  { x:0.30, y:0.20, maxR:170, delay:3000, sage:true  },
+];
 let rippleStart = null;
 function drawRipple(ts) {
   requestAnimationFrame(drawRipple);
@@ -287,24 +286,16 @@ function drawLive() {
   analyser.getByteFrequencyData(dataArray);
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  const bars = dataArray.length, barW = W / bars;
-  const centerY = H * 0.5;
+  const bars = dataArray.length, barW = W / bars, centerY = H * 0.82;
   for (let i = 0; i < bars; i++) {
     const val = dataArray[i] / 255;
-    const h = val * H * 0.28 + 1;
+    const h = val * H * 0.35 + 1;
     const alpha = 0.15 + val * 0.7;
     const grad = ctx.createLinearGradient(0, centerY, 0, centerY - h);
     grad.addColorStop(0, `rgba(201,168,76,${alpha})`);
-    grad.addColorStop(1, `rgba(240,220,140,${alpha * 0.5})`);
+    grad.addColorStop(1, `rgba(240,220,140,${alpha * 0.6})`);
     ctx.fillStyle = grad;
-    // top half
-    ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h);
-    // mirrored bottom half - fades out
-    const mirrorGrad = ctx.createLinearGradient(0, centerY, 0, centerY + h);
-    mirrorGrad.addColorStop(0, `rgba(201,168,76,${alpha * 0.4})`);
-    mirrorGrad.addColorStop(1, `rgba(201,168,76,0)`);
-    ctx.fillStyle = mirrorGrad;
-    ctx.fillRect(i * barW + barW * 0.1, centerY, barW * 0.7, h);
+    ctx.fillRect(i * barW + barW * 0.1, centerY - h, barW * 0.7, h * 2);
   }
 }
 
@@ -332,6 +323,236 @@ micBtn.addEventListener('click', async () => {
 });
 
 drawIdle();
+
+// ── 808 Sequencer ───────────────────────────────────────────────────────
+const TRACKS = [
+  { name: 'Kick',  type: 'kick'  },
+  { name: 'Snare', type: 'snare' },
+  { name: 'HiHat', type: 'hihat' },
+  { name: 'Clap',  type: 'clap'  },
+  { name: 'Bass',  type: 'bass'  },
+];
+const STEPS = 16;
+let seqGrid = TRACKS.map(() => Array(STEPS).fill(false));
+let seqPlaying = false, seqStep = 0, seqInterval = null;
+
+const seqOverlay = document.getElementById('seqOverlay');
+const seqPlayBtn = document.getElementById('seqPlay');
+const seqClearBtn = document.getElementById('seqClear');
+const seqBpm = document.getElementById('seqBpm');
+const seqRowsEl = document.getElementById('seqRows');
+
+TRACKS.forEach((track, ti) => {
+  const row = document.createElement('div');
+  row.className = 'seq-row';
+  const label = document.createElement('div');
+  label.className = 'seq-label';
+  label.textContent = track.name;
+  row.appendChild(label);
+  const pads = document.createElement('div');
+  pads.className = 'seq-pads';
+  for (let si = 0; si < STEPS; si++) {
+    const pad = document.createElement('div');
+    pad.className = 'seq-pad' + (si % 4 === 0 && si > 0 ? ' beat-4' : '');
+    pad.dataset.track = ti; pad.dataset.step = si;
+    pad.addEventListener('click', () => {
+      seqGrid[ti][si] = !seqGrid[ti][si];
+      pad.classList.toggle('active', seqGrid[ti][si]);
+    });
+    pads.appendChild(pad);
+  }
+  row.appendChild(pads);
+  seqRowsEl.appendChild(row);
+});
+
+function getPad(ti, si) { return seqRowsEl.querySelector(`[data-track="${ti}"][data-step="${si}"]`); }
+
+let seqAudioCtx = null, seqMaster = null, seqAnalyser = null, seqData = null;
+function getSeqCtx() {
+  if (!seqAudioCtx) {
+    seqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    seqMaster = seqAudioCtx.createGain();
+    seqAnalyser = seqAudioCtx.createAnalyser();
+    seqAnalyser.fftSize = 128;
+    seqMaster.connect(seqAnalyser);
+    seqAnalyser.connect(seqAudioCtx.destination);
+    seqData = new Uint8Array(seqAnalyser.frequencyBinCount);
+  }
+  return seqAudioCtx;
+}
+function out(ctx) { return seqMaster || ctx.destination; }
+
+function playKick(ctx, t) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(out(ctx));
+  o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(0.01,t+0.5);
+  g.gain.setValueAtTime(1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+  o.start(t); o.stop(t+0.5);
+}
+function playSnare(ctx, t) {
+  const buf = ctx.createBuffer(1, ctx.sampleRate*0.15, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const src=ctx.createBufferSource(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+  f.type='highpass'; f.frequency.value=1000;
+  src.buffer=buf; src.connect(f); f.connect(g); g.connect(out(ctx));
+  g.gain.setValueAtTime(0.6,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+  src.start(t);
+}
+function playHihat(ctx, t) {
+  const buf = ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+  const src=ctx.createBufferSource(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+  f.type='highpass'; f.frequency.value=7000;
+  src.buffer=buf; src.connect(f); f.connect(g); g.connect(out(ctx));
+  g.gain.setValueAtTime(0.4,t); src.start(t);
+}
+function playClap(ctx, t) {
+  for (let i=0;i<3;i++) {
+    const buf=ctx.createBuffer(1,ctx.sampleRate*0.05,ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for (let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.pow(1-j/d.length,1.5);
+    const src=ctx.createBufferSource(), g=ctx.createGain();
+    src.buffer=buf; src.connect(g); g.connect(out(ctx));
+    g.gain.setValueAtTime(0.5,t+i*0.01); src.start(t+i*0.01);
+  }
+}
+function playBass(ctx, t) {
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type='sawtooth'; o.connect(g); g.connect(out(ctx));
+  o.frequency.setValueAtTime(80,t);
+  g.gain.setValueAtTime(0.4,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+  o.start(t); o.stop(t+0.2);
+}
+function triggerSound(ti, t) {
+  const ctx = getSeqCtx();
+  const type = TRACKS[ti].type;
+  if (type==='kick')  playKick(ctx,t);
+  if (type==='snare') playSnare(ctx,t);
+  if (type==='hihat') playHihat(ctx,t);
+  if (type==='clap')  playClap(ctx,t);
+  if (type==='bass')  playBass(ctx,t);
+}
+
+function drawSeqMeter() {
+  if (!seqPlaying) return;
+  animId = requestAnimationFrame(drawSeqMeter);
+  if (!seqAnalyser) return;
+  seqAnalyser.getByteFrequencyData(seqData);
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const bars=seqData.length, barW=W/bars, centerY=H*0.82;
+  for (let i=0;i<bars;i++) {
+    const val=seqData[i]/255, h=val*H*0.35+1, alpha=0.15+val*0.7;
+    const grad=ctx.createLinearGradient(0,centerY,0,centerY-h);
+    grad.addColorStop(0,`rgba(201,168,76,${alpha})`);
+    grad.addColorStop(1,`rgba(240,220,140,${alpha*0.6})`);
+    ctx.fillStyle=grad;
+    ctx.fillRect(i*barW+barW*0.1,centerY-h,barW*0.7,h*2);
+  }
+}
+
+function seqTick() {
+  const ctx=getSeqCtx(), now=ctx.currentTime;
+  const prev=(seqStep-1+STEPS)%STEPS;
+  TRACKS.forEach((_,ti) => { const p=getPad(ti,prev); if(p) p.classList.remove('playing'); });
+  TRACKS.forEach((_,ti) => {
+    const p=getPad(ti,seqStep); if(p) p.classList.add('playing');
+    if(seqGrid[ti][seqStep]) triggerSound(ti,now);
+  });
+  seqStep=(seqStep+1)%STEPS;
+}
+
+function startSeq() {
+  const bpm=parseInt(seqBpm.value)||90;
+  const ms=(60/bpm/4)*1000;
+  seqPlaying=true; seqPlayBtn.textContent='Stop'; seqPlayBtn.classList.add('playing');
+  if (!active) { cancelAnimationFrame(animId); getSeqCtx(); drawSeqMeter(); }
+  seqTick(); seqInterval=setInterval(seqTick,ms);
+}
+function stopSeq() {
+  seqPlaying=false; clearInterval(seqInterval);
+  seqPlayBtn.textContent='Play'; seqPlayBtn.classList.remove('playing');
+  TRACKS.forEach((_,ti) => { for(let si=0;si<STEPS;si++) { const p=getPad(ti,si); if(p) p.classList.remove('playing'); } });
+  seqStep=0;
+  if (!active) { cancelAnimationFrame(animId); drawIdle(); }
+}
+
+function openSeq() { seqOverlay.classList.add('open'); }
+function closeSeq() { stopSeq(); seqOverlay.classList.remove('open'); }
+
+seqPlayBtn.addEventListener('click', () => { seqPlaying ? stopSeq() : startSeq(); });
+seqClearBtn.addEventListener('click', () => { stopSeq(); seqGrid=TRACKS.map(()=>Array(STEPS).fill(false)); document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
+document.getElementById('seqClose').addEventListener('click', closeSeq);
+seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq(); } });
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeSeq(); });
+
+// ── Triggers ─────────────────────────────────────────────────────────────
+// Konami code
+const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let ki=0;
+document.addEventListener('keydown', e => {
+  ki = e.key===KONAMI[ki] ? ki+1 : (e.key===KONAMI[0] ? 1 : 0);
+  if (ki===KONAMI.length) { ki=0; openSeq(); }
+});
+
+// Logo tap x5
+let ltaps=0, ltimer=null;
+document.querySelector('.logo').addEventListener('click', () => {
+  ltaps++; clearTimeout(ltimer);
+  ltimer=setTimeout(()=>{ ltaps=0; },2000);
+  if (ltaps>=5) { ltaps=0; openSeq(); }
+});
+
+// Double-tap the mic button
+let micTaps=0, micTimer=null;
+micBtn.addEventListener('click', () => {
+  micTaps++; clearTimeout(micTimer);
+  micTimer=setTimeout(()=>{ micTaps=0; },600);
+  if (micTaps>=2) { micTaps=0; openSeq(); }
+});
+
+// Shake
+let lastShake=0, lx=0, ly=0, lz=0;
+window.addEventListener('devicemotion', e => {
+  const a=e.accelerationIncludingGravity; if(!a) return;
+  const now=Date.now(); if(now-lastShake<1000) return;
+  const d=Math.abs(a.x-lx)+Math.abs(a.y-ly)+Math.abs(a.z-lz);
+  lx=a.x; ly=a.y; lz=a.z;
+  if(d>40) { lastShake=now; openSeq(); }
+});
+
+// Be Heard wave animation
+const waveCanvas=document.getElementById('waveCanvas');
+const wCtx=waveCanvas.getContext('2d');
+function resizeWave(){ waveCanvas.width=window.innerWidth; waveCanvas.height=window.innerHeight; }
+resizeWave(); window.addEventListener('resize',resizeWave);
+let waves=[], waveAnimId=null;
+function spawnWaves(x,y) {
+  for(let i=0;i<4;i++) waves.push({x,y,maxR:280+i*60,alpha:0.5-i*0.08,delay:i*80,born:performance.now()});
+  if(!waveAnimId) animWaves();
+}
+function animWaves(ts) {
+  wCtx.clearRect(0,0,waveCanvas.width,waveCanvas.height);
+  waves=waves.filter(w=>{
+    const age=(ts||performance.now())-w.born-w.delay;
+    if(age<0) return true;
+    const p=age/600; if(p>=1) return false;
+    wCtx.beginPath();
+    wCtx.arc(w.x,w.y,p*w.maxR,0,Math.PI*2);
+    wCtx.strokeStyle=`rgba(201,168,76,${w.alpha*(1-p)})`;
+    wCtx.lineWidth=1.5; wCtx.stroke();
+    return true;
+  });
+  waveAnimId=waves.length>0 ? requestAnimationFrame(animWaves) : null;
+  if(!waveAnimId) wCtx.clearRect(0,0,waveCanvas.width,waveCanvas.height);
+}
+const ctaEl=document.querySelector('.cta');
+ctaEl.addEventListener('mouseenter',()=>{ const r=ctaEl.getBoundingClientRect(); spawnWaves(r.left+r.width/2,r.top+r.height/2); });
+ctaEl.addEventListener('click',(e)=>spawnWaves(e.clientX,e.clientY));
+ctaEl.addEventListener('touchstart',(e)=>{ const t=e.touches[0]; spawnWaves(t.clientX,t.clientY); });
+
 </script>
 
 <div class="seq-overlay" id="seqOverlay">
