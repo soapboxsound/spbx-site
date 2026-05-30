@@ -241,16 +241,16 @@ window.addEventListener('resize', resize);
 
 // Ripple background
 const drops = [
-  { x:0.12, y:0.08, maxR:220, delay:0,    sage:false },
-  { x:0.85, y:0.06, maxR:280, delay:1800, sage:true  },
-  { x:0.55, y:0.15, maxR:180, delay:3500, sage:false },
-  { x:0.25, y:0.45, maxR:240, delay:800,  sage:true  },
-  { x:0.78, y:0.55, maxR:200, delay:5000, sage:false },
-  { x:0.92, y:0.30, maxR:160, delay:2600, sage:true  },
-  { x:0.08, y:0.70, maxR:260, delay:4200, sage:false },
-  { x:0.45, y:0.80, maxR:190, delay:1200, sage:true  },
-  { x:0.68, y:0.88, maxR:220, delay:6000, sage:false },
-  { x:0.30, y:0.20, maxR:170, delay:3000, sage:true  },
+  { x:0.12, y:0.08, maxR:220, delay:0    },
+  { x:0.85, y:0.06, maxR:280, delay:1800 },
+  { x:0.55, y:0.15, maxR:180, delay:3500 },
+  { x:0.25, y:0.45, maxR:240, delay:800  },
+  { x:0.78, y:0.55, maxR:200, delay:5000 },
+  { x:0.92, y:0.30, maxR:160, delay:2600 },
+  { x:0.08, y:0.70, maxR:260, delay:4200 },
+  { x:0.45, y:0.80, maxR:190, delay:1200 },
+  { x:0.68, y:0.88, maxR:220, delay:6000 },
+  { x:0.30, y:0.20, maxR:170, delay:3000 },
 ];
 let rippleStart = null;
 function drawRipple(ts) {
@@ -266,13 +266,13 @@ function drawRipple(ts) {
     const alpha = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
     rCtx.beginPath();
     rCtx.arc(d.x * W, d.y * H, r, 0, Math.PI * 2);
-    rCtx.strokeStyle = `rgba(91,127,166,${alpha * 0.07})`;
+    rCtx.strokeStyle = `rgba(168,135,74,${alpha * 0.09})`;
     rCtx.lineWidth = 1.5;
     rCtx.stroke();
     if (r > 30) {
       rCtx.beginPath();
       rCtx.arc(d.x * W, d.y * H, r * 0.65, 0, Math.PI * 2);
-      rCtx.strokeStyle = `rgba(91,127,166,${alpha * 0.04})`;
+      rCtx.strokeStyle = `rgba(168,135,74,${alpha * 0.05})`;
       rCtx.lineWidth = 1;
       rCtx.stroke();
     }
@@ -340,6 +340,7 @@ drawIdle();
 
 // ── 808 Sequencer ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
+const seqOverlay = document.getElementById('seqOverlay');
 const TRACKS = [
   { name: 'Kick',  type: 'kick'  },
   { name: 'Snare', type: 'snare' },
@@ -351,7 +352,7 @@ const STEPS = 16;
 let seqGrid = TRACKS.map(() => Array(STEPS).fill(false));
 let seqPlaying = false, seqStep = 0, seqInterval = null;
 
-const seqOverlay = document.getElementById('seqOverlay') || document.querySelector('.seq-overlay');
+
 const seqPlayBtn = document.getElementById('seqPlay');
 const seqClearBtn = document.getElementById('seqClear');
 const seqBpm = document.getElementById('seqBpm');
