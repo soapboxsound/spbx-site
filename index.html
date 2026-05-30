@@ -28,8 +28,8 @@
     --off-white: #F0EDE6;
     --near-black: #0D0D0D;
     --dim: rgba(240,237,230,0.38);
-    --sage: #7D9B7A;
-    --sage-dim: rgba(125,155,122,0.35);
+    --sage: #4A7A46;
+    --sage-dim: rgba(74,122,70,0.35);
   }
   html, body {
     width: 100%; height: 100vh;
@@ -103,7 +103,7 @@
   }
   .mic-btn:hover { border-color: rgba(201,168,76,0.4); }
   .mic-btn.active { border-color: var(--gold); }
-  .mic-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(125,155,122,0.5); transition: background 0.2s; }
+  .mic-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(74,122,70,0.6); transition: background 0.2s; }
   .mic-btn.active .mic-dot { background: var(--gold); animation: pulse 1s ease infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -169,7 +169,7 @@
   .seq-pad.playing { background: #fff; border-color: #fff; }
   .seq-pad.beat-4::after {
     content:''; position:absolute; left:-3px; top:0; bottom:0;
-    width:1px; background: rgba(125,155,122,0.25);
+    width:1px; background: rgba(74,122,70,0.25);
   }
   .seq-controls {
     display: flex; align-items: center; gap: 20px; margin-top: 24px;
