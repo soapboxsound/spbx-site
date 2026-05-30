@@ -116,6 +116,21 @@
     background: rgba(91,127,166,0.25); transition: background 0.3s;
   }
   .seq-trigger:hover .seq-trigger-dot { background: rgba(91,127,166,0.7); }
+  .nav-dot {
+    position: fixed; top: 28px;
+    background: none; border: none;
+    width: 16px; height: 16px;
+    cursor: pointer; padding: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none;
+  }
+  .nav-dot-left { left: 28px; }
+  .nav-dot-right { right: 28px; }
+  .nav-dot-inner {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(91,127,166,0.25); transition: background 0.3s;
+  }
+  .nav-dot:hover .nav-dot-inner { background: rgba(91,127,166,0.7); }
   @media (max-width: 500px) {
     .frame { padding: 0 28px; }
     .headline { font-size: clamp(38px, 12vw, 56px); }
@@ -220,6 +235,8 @@
   <p class="manifesto">Music supervision &amp; development.</p>
   <a class="cta" href="mailto:hi@spbxsound.com">Get In Touch</a>
 </div>
+<a class="nav-dot nav-dot-left" href="https://mixer.spbxsound.com/" title="Mixer" target="_blank"><span class="nav-dot-inner"></span></a>
+<a class="nav-dot nav-dot-right" href="https://review.spbxsound.com/" title="Review" target="_blank"><span class="nav-dot-inner"></span></a>
 <button class="seq-trigger" id="seqTrigger" title="Open Sequencer"><span class="seq-trigger-dot"></span></button>
 <button class="mic-btn" id="micBtn" title="Activate Mic">
   <span class="mic-dot"></span>
