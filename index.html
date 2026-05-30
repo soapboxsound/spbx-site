@@ -224,6 +224,24 @@
 <button class="mic-btn" id="micBtn" title="Activate Mic">
   <span class="mic-dot"></span>
 </button>
+
+<div class="seq-overlay" id="seqOverlay">
+  <div class="seq-panel">
+    <button class="seq-close" id="seqClose">ESC / CLOSE</button>
+    <div class="seq-title">808 Sequencer</div>
+    <div id="patternBtns" style="display:flex;gap:8px;margin-bottom:20px;"></div>
+    <div id="seqRows"></div>
+    <div class="seq-controls">
+      <button class="seq-btn" id="seqPlay">Play</button>
+      <button class="seq-btn" id="seqClear">Clear</button>
+      <div class="seq-bpm-wrap">
+        <span class="seq-bpm-label">BPM</span>
+        <input class="seq-bpm" id="seqBpm" type="number" value="90" min="40" max="200" />
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const rippleCanvas = document.getElementById('ripple');
 const rCtx = rippleCanvas.getContext('2d');
@@ -339,8 +357,33 @@ micBtn.addEventListener('click', async () => {
 drawIdle();
 
 // ── 808 Sequencer ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
 const seqOverlay = document.getElementById('seqOverlay');
+
+const PATTERNS = {
+  'Classic 808': [
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,0,0,1,0,0,1,0,0,0,1,0,0,0,0,0],
+  ],
+  'Four-on-floor': [
+    [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1],
+    [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0],
+  ],
+  'Boom Bap': [
+    [1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1],
+    [1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+    [1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0],
+  ],
+};
+const PATTERN_NAMES = Object.keys(PATTERNS);
+let currentPattern = 0;
 const TRACKS = [
   { name: 'Kick',  type: 'kick'  },
   { name: 'Snare', type: 'snare' },
@@ -540,53 +583,9 @@ document.addEventListener('keydown', e => {
   if (ki===KONAMI.length) { ki=0; openSeq(); }
 });
 
-// Logo tap x5
-let ltaps=0, ltimer=null;
-document.querySelector('.logo').addEventListener('click', () => {
-  ltaps++; clearTimeout(ltimer);
-  ltimer=setTimeout(()=>{ ltaps=0; },2000);
-  if (ltaps>=5) { ltaps=0; openSeq(); }
-});
 
-// Double-tap the mic button
-let micTaps=0, micTimer=null;
-micBtn.addEventListener('click', () => {
-  micTaps++; clearTimeout(micTimer);
-  micTimer=setTimeout(()=>{ micTaps=0; },600);
-  if (micTaps>=2) { micTaps=0; openSeq(); }
-});
-
-// Shake
-let lastShake=0, lx=0, ly=0, lz=0;
-window.addEventListener('devicemotion', e => {
-  const a=e.accelerationIncludingGravity; if(!a) return;
-  const now=Date.now(); if(now-lastShake<1000) return;
-  const d=Math.abs(a.x-lx)+Math.abs(a.y-ly)+Math.abs(a.z-lz);
-  lx=a.x; ly=a.y; lz=a.z;
-  if(d>40) { lastShake=now; openSeq(); }
-});
-
-
-});
 
 </script>
-
-<div class="seq-overlay" id="seqOverlay">
-  <div class="seq-panel">
-    <button class="seq-close" id="seqClose">ESC / CLOSE</button>
-    <div class="seq-title">808 Sequencer</div>
-    <div id="patternBtns" style="display:flex;gap:8px;margin-bottom:20px;"></div>
-    <div id="seqRows"></div>
-    <div class="seq-controls">
-      <button class="seq-btn" id="seqPlay">Play</button>
-      <button class="seq-btn" id="seqClear">Clear</button>
-      <div class="seq-bpm-wrap">
-        <span class="seq-bpm-label">BPM</span>
-        <input class="seq-bpm" id="seqBpm" type="number" value="90" min="40" max="200" />
-      </div>
-    </div>
-  </div>
-</div>
 
 
 <!-- Bio for SEO -->
