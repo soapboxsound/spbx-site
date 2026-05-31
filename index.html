@@ -629,54 +629,42 @@ function getStepDuration() {
 function out(ctx) { return seqMaster || ctx.destination; }
 
 function playKick(ctx, t) {
-  t = scheduleTime(ctx, t);
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.connect(g); g.connect(out(ctx));
-  o.frequency.setValueAtTime(150, t);
-  o.frequency.exponentialRampToValueAtTime(40, t + 0.5);
-  g.gain.setValueAtTime(1, t);
-  g.gain.linearRampToValueAtTime(0.001, t + 0.5);
-  o.start(t); o.stop(t + 0.5);
+  o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(0.01,t+0.5);
+  g.gain.setValueAtTime(1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+  o.start(t); o.stop(t+0.5);
 }
 function playSnare(ctx, t) {
-  t = scheduleTime(ctx, t);
-  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+  const buf = ctx.createBuffer(1, ctx.sampleRate*0.15, ctx.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
-  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-  f.type = 'highpass'; f.frequency.value = 1000;
-  src.buffer = buf; src.connect(f); f.connect(g); g.connect(out(ctx));
-  g.gain.setValueAtTime(0.6, t);
-  g.gain.linearRampToValueAtTime(0.001, t + 0.15);
-  src.start(t); src.stop(t + 0.15);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const src=ctx.createBufferSource(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+  f.type='highpass'; f.frequency.value=1000;
+  src.buffer=buf; src.connect(f); f.connect(g); g.connect(out(ctx));
+  g.gain.setValueAtTime(0.6,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+  src.start(t);
 }
 function playHihat(ctx, t) {
-  t = scheduleTime(ctx, t);
-  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+  const buf = ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
-  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-  f.type = 'highpass'; f.frequency.value = 7000;
-  src.buffer = buf; src.connect(f); f.connect(g); g.connect(out(ctx));
-  g.gain.setValueAtTime(0.4, t);
-  g.gain.linearRampToValueAtTime(0.001, t + 0.05);
-  src.start(t); src.stop(t + 0.05);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+  const src=ctx.createBufferSource(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+  f.type='highpass'; f.frequency.value=7000;
+  src.buffer=buf; src.connect(f); f.connect(g); g.connect(out(ctx));
+  g.gain.setValueAtTime(0.4,t); src.start(t);
 }
 function playClap(ctx, t) {
-  t = scheduleTime(ctx, t);
-  for (let i = 0; i < 3; i++) {
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / d.length, 1.5);
-    const src = ctx.createBufferSource(), g = ctx.createGain();
-    src.buffer = buf; src.connect(g); g.connect(out(ctx));
-    const hit = t + i * 0.01;
-    g.gain.setValueAtTime(0.5, hit);
-    src.start(hit); src.stop(hit + 0.05);
+  for (let i=0;i<3;i++) {
+    const buf=ctx.createBuffer(1,ctx.sampleRate*0.05,ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for (let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.pow(1-j/d.length,1.5);
+    const src=ctx.createBufferSource(), g=ctx.createGain();
+    src.buffer=buf; src.connect(g); g.connect(out(ctx));
+    g.gain.setValueAtTime(0.5,t+i*0.01); src.start(t+i*0.01);
   }
 }
 function playBass(ctx, t) {
-  t = scheduleTime(ctx, t);
   // Tonal sub bass — C2 root, slow decay, stays pitched throughout
   const freq = CM_ROOT; // always C2 — locks to the key
   const decay = 0.7;
@@ -707,7 +695,7 @@ function playBass(ctx, t) {
   filter.connect(master); master.connect(out(ctx));
 
   master.gain.setValueAtTime(0.7, t);
-  master.gain.linearRampToValueAtTime(0.001, t + decay);
+  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
 
   sub.start(t); sub.stop(t + decay);
   harm.start(t); harm.stop(t + decay);
@@ -715,7 +703,6 @@ function playBass(ctx, t) {
 // Arp 1 moves stepwise through the scale rather than fully random
 let arp1Idx = 0;
 function playArp1(ctx, t, pool) {
-  t = scheduleTime(ctx, t);
   // Stepwise with occasional skip — melodic not random
   const step = Math.random() < 0.7 ? 1 : (Math.random() < 0.5 ? 2 : -1);
   arp1Idx = (arp1Idx + step + pool.length) % pool.length;
@@ -734,14 +721,14 @@ function playArp1(ctx, t, pool) {
   const master = ctx.createGain();
   const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   master.gain.setValueAtTime(vel, t);
-  master.gain.linearRampToValueAtTime(0.001, t + decay);
+  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
   filter.connect(master);
   if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.value = pan; }
   else { master.connect(out(ctx)); }
   detunes.forEach(d => {
     const o = ctx.createOscillator();
     o.type = 'sawtooth';
-    o.frequency.setValueAtTime(freq * Math.pow(2, d / 1200), t);
+    o.frequency.setValueAtTime(freq * Math.pow(2, d/1200), t);
     const g = ctx.createGain(); g.gain.value = 0.18;
     o.connect(g); g.connect(filter);
     o.start(t); o.stop(t + decay);
@@ -751,7 +738,6 @@ function playArp1(ctx, t, pool) {
 // Arp 2 moves in the opposite direction to Arp 1 — creates counterpoint
 let arp2Idx = 4;
 function playArp2(ctx, t, pool) {
-  t = scheduleTime(ctx, t);
   // Tends to move down or stay — counterpoint to Arp 1
   const step = Math.random() < 0.6 ? -1 : (Math.random() < 0.5 ? 0 : 1);
   arp2Idx = (arp2Idx + step + pool.length) % pool.length;
@@ -762,7 +748,7 @@ function playArp2(ctx, t, pool) {
   const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   const master = ctx.createGain();
   master.gain.setValueAtTime(vel, t);
-  master.gain.linearRampToValueAtTime(0.001, t + decay);
+  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
   if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.setValueAtTime(pan, t); }
   else { master.connect(out(ctx)); }
   // Rhodes — sine fundamental with decaying harmonics
@@ -772,13 +758,14 @@ function playArp2(ctx, t, pool) {
     o.frequency.setValueAtTime(freq * ratio, t);
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp * vel * 1.4, t);
-    g.gain.linearRampToValueAtTime(0.001, t + decay / ratio);
+    g.gain.exponentialRampToValueAtTime(0.001, t + decay / ratio);
     o.connect(g); g.connect(master);
     o.start(t); o.stop(t + decay);
   });
 }
 function triggerSound(ti, t) {
   const ctx = getSeqCtx();
+  t = scheduleTime(ctx, t);
   const type = TRACKS[ti].type;
   if (type==='kick')  playKick(ctx,t);
   if (type==='snare') playSnare(ctx,t);
