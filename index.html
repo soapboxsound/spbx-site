@@ -139,18 +139,40 @@
     .logo img { height: 48px; }
     .logo { margin-bottom: 40px; }
     .mic-btn { bottom: 24px; right: 24px; }
-    .seq-panel { width: 96vw; padding: 16px 12px; }
-    .seq-close { top: 10px; right: 12px; font-size: 8px; }
-    .seq-title { font-size: 9px; margin-bottom: 12px; }
-    #patternBtns { flex-wrap: wrap; width: 100%; gap: 5px; margin-bottom: 12px; }
-    .pat-btn { font-size: 7px; padding: 4px 8px; letter-spacing: 0.1em; }
-    .seq-row { gap: 4px; margin-bottom: 4px; }
-    .seq-label { font-size: 7px; width: 32px; }
-    .seq-pads { gap: 2px; }
-    .seq-pad { height: 20px; }
-    .seq-controls { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .seq-btn { font-size: 8px; padding: 6px 14px; }
-    .seq-bpm-wrap { gap: 6px; }
+    .seq-overlay { align-items: flex-end; }
+    .seq-panel {
+      width: 100%; max-width: 100%; max-height: 88vh;
+      overflow-y: auto; padding: 40px 14px 20px;
+      border-left: none; border-right: none; border-bottom: none;
+    }
+    .seq-close { top: 8px; right: 8px; width: 40px; height: 40px; font-size: 28px; }
+    .seq-header {
+      margin-bottom: 14px; padding-right: 44px;
+      align-items: center;
+    }
+    .seq-title { font-size: 10px; letter-spacing: 0.2em; }
+    .seq-title::before { width: 16px; }
+    .seq-logo { height: 14px; }
+    .pattern-btns {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 6px; margin-bottom: 14px;
+    }
+    .pat-btn {
+      width: 100%; text-align: center;
+      font-size: 7.5px; padding: 9px 4px;
+      letter-spacing: 0.06em; line-height: 1.2;
+    }
+    .seq-row { gap: 3px; margin-bottom: 3px; }
+    .seq-label { font-size: 6.5px; width: 28px; letter-spacing: 0.1em; }
+    .seq-pads { gap: 2px; min-width: 0; }
+    .seq-pad { height: 22px; min-width: 0; }
+    .seq-controls {
+      flex-wrap: wrap; gap: 10px; margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(91,127,166,0.15);
+    }
+    .seq-btn { font-size: 8px; padding: 8px 16px; flex: 1; min-width: 0; }
+    .seq-bpm-wrap { margin-left: 0; width: 100%; justify-content: center; gap: 6px; }
     .seq-bpm-label { font-size: 8px; }
     .seq-bpm { font-size: 11px; width: 36px; }
   }
@@ -179,18 +201,32 @@
   }
   .pat-btn.current { border-color: var(--gold); color: var(--gold); }
   .pat-btn:hover { border-color: rgba(91,127,166,0.6); color: rgba(240,237,230,0.7); }
+  .seq-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; padding-right: 36px;
+  }
+  .seq-logo {
+    height: 18px; width: auto;
+    mix-blend-mode: screen; opacity: 0.7;
+  }
+  .pattern-btns {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  }
   .seq-close {
-    position: absolute; top: 16px; right: 20px;
+    position: absolute; top: 14px; right: 14px;
+    width: 36px; height: 36px;
     background: none; border: none; color: var(--dim);
-    font-family: 'Geist Mono', monospace; font-size: 11px;
-    letter-spacing: 0.15em; cursor: pointer;
+    font-family: 'Geist Mono', monospace;
+    font-size: 24px; font-weight: 300; line-height: 1;
+    cursor: pointer; padding: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
     transition: color 0.2s;
   }
   .seq-close:hover { color: var(--gold); }
   .seq-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
-    color: var(--gold); margin-bottom: 28px;
+    color: var(--gold); margin-bottom: 0;
     display: flex; align-items: center; gap: 12px;
   }
   .seq-title::before { content:''; display:block; width:24px; height:1px; background:var(--gold-dim); }
@@ -261,13 +297,13 @@
 </button>
 
 <div class="seq-overlay" id="seqOverlay">
-  <div class="seq-panel">
-    <button class="seq-close" id="seqClose">ESC / CLOSE</button>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
-      <div class="seq-title" style="margin-bottom:0;">808 Sequencer</div>
-      <img src="Logo_White.png" alt="SPBX" style="height:18px;width:auto;mix-blend-mode:screen;opacity:0.7;" />
+  <div class="seq-panel" id="seqPanel">
+    <button class="seq-close" id="seqClose" type="button" aria-label="Close sequencer">&times;</button>
+    <div class="seq-header">
+      <div class="seq-title">808 Sequencer</div>
+      <img src="Logo_White.png" alt="SPBX" class="seq-logo" />
     </div>
-    <div id="patternBtns" style="display:flex;gap:8px;margin-bottom:20px;"></div>
+    <div id="patternBtns" class="pattern-btns"></div>
     <div id="seqRows"></div>
     <div class="seq-controls">
       <button class="seq-btn" id="seqPlay">Play</button>
@@ -488,7 +524,8 @@ const ARP_POOL_1 = [155.56, 174.61, 196.00, 207.65, 233.08, 261.63, 293.66, 311.
 const ARP_POOL_2 = [65.41, 73.42, 77.78, 87.31, 98.00, 103.83, 116.54, 130.81, 146.83, 155.56];
 const STEPS = 16;
 let seqGrid = TRACKS.map(() => Array(STEPS).fill(false));
-let seqPlaying = false, seqStep = 0, seqInterval = null;
+let seqPlaying = false, seqStep = 0, scheduleTimer = null, visualRAF = null;
+let nextStepTime = 0, seqStartTime = 0, lastVisualStep = -1;
 
 
 const seqPlayBtn = document.getElementById('seqPlay');
@@ -527,6 +564,7 @@ function initSeqAudioGraph() {
   if (seqAudioCtx && seqAudioCtx.state !== 'closed') return seqAudioCtx;
   seqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   seqMaster = seqAudioCtx.createGain();
+  seqMaster.gain.value = 1;
   seqAnalyser = seqAudioCtx.createAnalyser();
   seqAnalyser.fftSize = 128;
   seqMaster.connect(seqAnalyser);
@@ -534,10 +572,22 @@ function initSeqAudioGraph() {
   seqData = new Uint8Array(seqAnalyser.frequencyBinCount);
   return seqAudioCtx;
 }
+function unlockSeqAudio(ctx) {
+  const frames = Math.max(256, Math.ceil(ctx.sampleRate * 0.05));
+  const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(seqMaster);
+  source.start(0);
+}
 function getSeqCtx() {
   const ctx = initSeqAudioGraph();
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
+}
+function getStepDuration() {
+  const bpm = parseInt(seqBpm.value) || 90;
+  return 60 / bpm / 4;
 }
 function out(ctx) { return seqMaster || ctx.destination; }
 
@@ -706,31 +756,70 @@ function drawSeqMeter() {
   }
 }
 
-function seqTick() {
-  const ctx=getSeqCtx();
+function scheduleNotes() {
+  if (!seqPlaying) return;
+  const ctx = getSeqCtx();
   if (ctx.state === 'suspended') ctx.resume();
-  const now=ctx.currentTime + 0.1; // lookahead buffer for mobile
-  const prev=(seqStep-1+STEPS)%STEPS;
-  TRACKS.forEach((_,ti) => { const p=getPad(ti,prev); if(p) p.classList.remove('playing'); });
-  TRACKS.forEach((_,ti) => {
-    const p=getPad(ti,seqStep); if(p) p.classList.add('playing');
-    if(seqGrid[ti][seqStep]) triggerSound(ti,now);
-  });
-  seqStep=(seqStep+1)%STEPS;
+  const stepDur = getStepDuration();
+  while (nextStepTime < ctx.currentTime + 0.12) {
+    const step = seqStep;
+    TRACKS.forEach((_, ti) => {
+      if (seqGrid[ti][step]) triggerSound(ti, nextStepTime);
+    });
+    seqStep = (seqStep + 1) % STEPS;
+    nextStepTime += stepDur;
+  }
+  scheduleTimer = setTimeout(scheduleNotes, 25);
+}
+
+function updatePlayingVisuals() {
+  if (!seqPlaying) return;
+  const ctx = getSeqCtx();
+  const stepDur = getStepDuration();
+  const currentStep = Math.floor(Math.max(0, ctx.currentTime - seqStartTime) / stepDur) % STEPS;
+  if (currentStep !== lastVisualStep) {
+    if (lastVisualStep >= 0) {
+      TRACKS.forEach((_, ti) => {
+        const p = getPad(ti, lastVisualStep);
+        if (p) p.classList.remove('playing');
+      });
+    }
+    TRACKS.forEach((_, ti) => {
+      const p = getPad(ti, currentStep);
+      if (p) p.classList.add('playing');
+    });
+    lastVisualStep = currentStep;
+  }
+  visualRAF = requestAnimationFrame(updatePlayingVisuals);
 }
 
 function startSeq() {
-  const bpm=parseInt(seqBpm.value)||90;
-  const ms=(60/bpm/4)*1000;
-  seqPlaying=true; seqPlayBtn.textContent='Stop'; seqPlayBtn.classList.add('playing');
+  const ctx = initSeqAudioGraph();
+  seqPlaying = true;
+  seqStep = 0;
+  lastVisualStep = -1;
+  seqStartTime = ctx.currentTime + 0.05;
+  nextStepTime = seqStartTime;
+  seqPlayBtn.textContent = 'Stop';
+  seqPlayBtn.classList.add('playing');
   if (!active) { cancelAnimationFrame(animId); drawSeqMeter(); }
-  seqTick(); seqInterval=setInterval(seqTick,ms);
+  scheduleNotes();
+  updatePlayingVisuals();
 }
 function stopSeq() {
-  seqPlaying=false; clearInterval(seqInterval);
-  seqPlayBtn.textContent='Play'; seqPlayBtn.classList.remove('playing');
-  TRACKS.forEach((_,ti) => { for(let si=0;si<STEPS;si++) { const p=getPad(ti,si); if(p) p.classList.remove('playing'); } });
-  seqStep=0;
+  seqPlaying = false;
+  clearTimeout(scheduleTimer);
+  cancelAnimationFrame(visualRAF);
+  seqPlayBtn.textContent = 'Play';
+  seqPlayBtn.classList.remove('playing');
+  TRACKS.forEach((_, ti) => {
+    for (let si = 0; si < STEPS; si++) {
+      const p = getPad(ti, si);
+      if (p) p.classList.remove('playing');
+    }
+  });
+  seqStep = 0;
+  lastVisualStep = -1;
   if (!active) { cancelAnimationFrame(animId); drawIdle(); }
 }
 
@@ -738,6 +827,17 @@ function openSeq() {
   seqOverlay.classList.add('open');
 }
 function closeSeq() { stopSeq(); seqOverlay.classList.remove('open'); }
+
+const seqPanel = document.getElementById('seqPanel');
+seqPanel.addEventListener('touchstart', () => {
+  const ctx = initSeqAudioGraph();
+  unlockSeqAudio(ctx);
+  if (ctx.state === 'suspended') ctx.resume();
+}, { once: true, passive: true });
+
+seqOverlay.addEventListener('click', (e) => {
+  if (e.target === seqOverlay) closeSeq();
+});
 
 // Pattern buttons
 function loadPattern(idx) {
@@ -769,18 +869,14 @@ PATTERN_NAMES.forEach((name, idx) => {
 // Load first pattern into pads on init — defer to ensure pads are in DOM
 setTimeout(() => loadPattern(0), 0);
 
-seqPlayBtn.addEventListener('click', () => {
+seqPlayBtn.addEventListener('click', async () => {
   if (seqPlaying) { stopSeq(); return; }
-  // iOS: create context + play silent buffer synchronously inside tap handler
   if (seqAudioCtx && seqAudioCtx.state === 'closed') {
     seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
   }
   const ctx = initSeqAudioGraph();
-  const unlock = ctx.createBufferSource();
-  unlock.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
-  unlock.connect(seqMaster);
-  unlock.start(0);
-  if (ctx.state === 'suspended') ctx.resume();
+  unlockSeqAudio(ctx);
+  if (ctx.state === 'suspended') await ctx.resume();
   startSeq();
 });
 seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
