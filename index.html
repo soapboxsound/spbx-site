@@ -263,6 +263,8 @@
     font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
     padding: 8px 20px; cursor: pointer;
     transition: background 0.2s, color 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .seq-btn:hover { background: var(--gold); color: #0d0d0d; }
   .seq-btn.playing { background: var(--gold); color: #0d0d0d; }
@@ -548,6 +550,7 @@ TRACKS.forEach((track, ti) => {
     pad.className = 'seq-pad' + (si % 4 === 0 && si > 0 ? ' beat-4' : '') + (isMelodic ? ' melodic' : '');
     pad.dataset.track = ti; pad.dataset.step = si;
     pad.addEventListener('click', () => {
+      warmSeqAudio();
       seqGrid[ti][si] = !seqGrid[ti][si];
       pad.classList.toggle('active', seqGrid[ti][si]);
     });
@@ -560,9 +563,16 @@ TRACKS.forEach((track, ti) => {
 function getPad(ti, si) { return seqRowsEl.querySelector(`[data-track="${ti}"][data-step="${si}"]`); }
 
 let seqAudioCtx = null, seqMaster = null, seqAnalyser = null, seqData = null;
+let seqAudioReady = false;
+
 function initSeqAudioGraph() {
   if (seqAudioCtx && seqAudioCtx.state !== 'closed') return seqAudioCtx;
-  seqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  try {
+    seqAudioCtx = new AudioCtx({ latencyHint: 'interactive' });
+  } catch (_) {
+    seqAudioCtx = new AudioCtx();
+  }
   seqMaster = seqAudioCtx.createGain();
   seqMaster.gain.value = 1;
   seqAnalyser = seqAudioCtx.createAnalyser();
@@ -572,19 +582,46 @@ function initSeqAudioGraph() {
   seqData = new Uint8Array(seqAnalyser.frequencyBinCount);
   return seqAudioCtx;
 }
+
 function unlockSeqAudio(ctx) {
-  const frames = Math.max(256, Math.ceil(ctx.sampleRate * 0.05));
+  const frames = Math.max(512, Math.ceil(ctx.sampleRate * 0.05));
   const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(seqMaster);
-  source.start(0);
+  const toDest = ctx.createBufferSource();
+  toDest.buffer = buffer;
+  toDest.connect(ctx.destination);
+  toDest.start(0);
+  const toMaster = ctx.createBufferSource();
+  toMaster.buffer = buffer;
+  toMaster.connect(seqMaster);
+  toMaster.start(0);
 }
+
+async function ensureSeqAudioRunning() {
+  if (seqAudioCtx && seqAudioCtx.state === 'closed') {
+    seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
+    seqAudioReady = false;
+  }
+  const ctx = initSeqAudioGraph();
+  unlockSeqAudio(ctx);
+  if (ctx.state === 'suspended') await ctx.resume();
+  seqAudioReady = ctx.state === 'running';
+  return seqAudioReady ? ctx : null;
+}
+
+function warmSeqAudio() {
+  ensureSeqAudioRunning();
+}
+
 function getSeqCtx() {
   const ctx = initSeqAudioGraph();
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }
+
+function scheduleTime(ctx, t) {
+  return Math.max(t, ctx.currentTime + 0.005);
+}
+
 function getStepDuration() {
   const bpm = parseInt(seqBpm.value) || 90;
   return 60 / bpm / 4;
@@ -592,42 +629,54 @@ function getStepDuration() {
 function out(ctx) { return seqMaster || ctx.destination; }
 
 function playKick(ctx, t) {
+  t = scheduleTime(ctx, t);
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.connect(g); g.connect(out(ctx));
-  o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(0.01,t+0.5);
-  g.gain.setValueAtTime(1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
-  o.start(t); o.stop(t+0.5);
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+  g.gain.setValueAtTime(1, t);
+  g.gain.linearRampToValueAtTime(0.001, t + 0.5);
+  o.start(t); o.stop(t + 0.5);
 }
 function playSnare(ctx, t) {
-  const buf = ctx.createBuffer(1, ctx.sampleRate*0.15, ctx.sampleRate);
+  t = scheduleTime(ctx, t);
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
-  const src=ctx.createBufferSource(), g=ctx.createGain(), f=ctx.createBiquadFilter();
-  f.type='highpass'; f.frequency.value=1000;
-  src.buffer=buf; src.connect(f); f.connect(g); g.connect(out(ctx));
-  g.gain.setValueAtTime(0.6,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
-  src.start(t);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  f.type = 'highpass'; f.frequency.value = 1000;
+  src.buffer = buf; src.connect(f); f.connect(g); g.connect(out(ctx));
+  g.gain.setValueAtTime(0.6, t);
+  g.gain.linearRampToValueAtTime(0.001, t + 0.15);
+  src.start(t); src.stop(t + 0.15);
 }
 function playHihat(ctx, t) {
-  const buf = ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
+  t = scheduleTime(ctx, t);
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
-  const src=ctx.createBufferSource(), g=ctx.createGain(), f=ctx.createBiquadFilter();
-  f.type='highpass'; f.frequency.value=7000;
-  src.buffer=buf; src.connect(f); f.connect(g); g.connect(out(ctx));
-  g.gain.setValueAtTime(0.4,t); src.start(t);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  f.type = 'highpass'; f.frequency.value = 7000;
+  src.buffer = buf; src.connect(f); f.connect(g); g.connect(out(ctx));
+  g.gain.setValueAtTime(0.4, t);
+  g.gain.linearRampToValueAtTime(0.001, t + 0.05);
+  src.start(t); src.stop(t + 0.05);
 }
 function playClap(ctx, t) {
-  for (let i=0;i<3;i++) {
-    const buf=ctx.createBuffer(1,ctx.sampleRate*0.05,ctx.sampleRate);
-    const d=buf.getChannelData(0);
-    for (let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.pow(1-j/d.length,1.5);
-    const src=ctx.createBufferSource(), g=ctx.createGain();
-    src.buffer=buf; src.connect(g); g.connect(out(ctx));
-    g.gain.setValueAtTime(0.5,t+i*0.01); src.start(t+i*0.01);
+  t = scheduleTime(ctx, t);
+  for (let i = 0; i < 3; i++) {
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / d.length, 1.5);
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = buf; src.connect(g); g.connect(out(ctx));
+    const hit = t + i * 0.01;
+    g.gain.setValueAtTime(0.5, hit);
+    src.start(hit); src.stop(hit + 0.05);
   }
 }
 function playBass(ctx, t) {
+  t = scheduleTime(ctx, t);
   // Tonal sub bass — C2 root, slow decay, stays pitched throughout
   const freq = CM_ROOT; // always C2 — locks to the key
   const decay = 0.7;
@@ -658,7 +707,7 @@ function playBass(ctx, t) {
   filter.connect(master); master.connect(out(ctx));
 
   master.gain.setValueAtTime(0.7, t);
-  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  master.gain.linearRampToValueAtTime(0.001, t + decay);
 
   sub.start(t); sub.stop(t + decay);
   harm.start(t); harm.stop(t + decay);
@@ -666,6 +715,7 @@ function playBass(ctx, t) {
 // Arp 1 moves stepwise through the scale rather than fully random
 let arp1Idx = 0;
 function playArp1(ctx, t, pool) {
+  t = scheduleTime(ctx, t);
   // Stepwise with occasional skip — melodic not random
   const step = Math.random() < 0.7 ? 1 : (Math.random() < 0.5 ? 2 : -1);
   arp1Idx = (arp1Idx + step + pool.length) % pool.length;
@@ -684,14 +734,14 @@ function playArp1(ctx, t, pool) {
   const master = ctx.createGain();
   const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   master.gain.setValueAtTime(vel, t);
-  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  master.gain.linearRampToValueAtTime(0.001, t + decay);
   filter.connect(master);
   if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.value = pan; }
   else { master.connect(out(ctx)); }
   detunes.forEach(d => {
     const o = ctx.createOscillator();
     o.type = 'sawtooth';
-    o.frequency.setValueAtTime(freq * Math.pow(2, d/1200), t);
+    o.frequency.setValueAtTime(freq * Math.pow(2, d / 1200), t);
     const g = ctx.createGain(); g.gain.value = 0.18;
     o.connect(g); g.connect(filter);
     o.start(t); o.stop(t + decay);
@@ -701,6 +751,7 @@ function playArp1(ctx, t, pool) {
 // Arp 2 moves in the opposite direction to Arp 1 — creates counterpoint
 let arp2Idx = 4;
 function playArp2(ctx, t, pool) {
+  t = scheduleTime(ctx, t);
   // Tends to move down or stay — counterpoint to Arp 1
   const step = Math.random() < 0.6 ? -1 : (Math.random() < 0.5 ? 0 : 1);
   arp2Idx = (arp2Idx + step + pool.length) % pool.length;
@@ -711,7 +762,7 @@ function playArp2(ctx, t, pool) {
   const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   const master = ctx.createGain();
   master.gain.setValueAtTime(vel, t);
-  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  master.gain.linearRampToValueAtTime(0.001, t + decay);
   if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.setValueAtTime(pan, t); }
   else { master.connect(out(ctx)); }
   // Rhodes — sine fundamental with decaying harmonics
@@ -721,7 +772,7 @@ function playArp2(ctx, t, pool) {
     o.frequency.setValueAtTime(freq * ratio, t);
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp * vel * 1.4, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + decay / ratio);
+    g.gain.linearRampToValueAtTime(0.001, t + decay / ratio);
     o.connect(g); g.connect(master);
     o.start(t); o.stop(t + decay);
   });
@@ -760,11 +811,21 @@ function scheduleNotes() {
   if (!seqPlaying) return;
   const ctx = getSeqCtx();
   if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state !== 'running') {
+    scheduleTimer = setTimeout(scheduleNotes, 50);
+    return;
+  }
   const stepDur = getStepDuration();
-  while (nextStepTime < ctx.currentTime + 0.12) {
+  if (nextStepTime < ctx.currentTime - stepDur) {
+    const missed = Math.floor((ctx.currentTime - nextStepTime) / stepDur) + 1;
+    seqStep = (seqStep + missed) % STEPS;
+    nextStepTime += missed * stepDur;
+  }
+  while (nextStepTime < ctx.currentTime + 0.1) {
     const step = seqStep;
+    const when = scheduleTime(ctx, nextStepTime);
     TRACKS.forEach((_, ti) => {
-      if (seqGrid[ti][step]) triggerSound(ti, nextStepTime);
+      if (seqGrid[ti][step]) triggerSound(ti, when);
     });
     seqStep = (seqStep + 1) % STEPS;
     nextStepTime += stepDur;
@@ -793,8 +854,8 @@ function updatePlayingVisuals() {
   visualRAF = requestAnimationFrame(updatePlayingVisuals);
 }
 
-function startSeq() {
-  const ctx = initSeqAudioGraph();
+function startSeq(prime) {
+  const ctx = getSeqCtx();
   seqPlaying = true;
   seqStep = 0;
   lastVisualStep = -1;
@@ -803,6 +864,13 @@ function startSeq() {
   seqPlayBtn.textContent = 'Stop';
   seqPlayBtn.classList.add('playing');
   if (!active) { cancelAnimationFrame(animId); drawSeqMeter(); }
+  if (prime) {
+    TRACKS.forEach((_, ti) => {
+      if (seqGrid[ti][0]) triggerSound(ti, seqStartTime);
+    });
+    seqStep = 1;
+    nextStepTime = seqStartTime + getStepDuration();
+  }
   scheduleNotes();
   updatePlayingVisuals();
 }
@@ -829,11 +897,7 @@ function openSeq() {
 function closeSeq() { stopSeq(); seqOverlay.classList.remove('open'); }
 
 const seqPanel = document.getElementById('seqPanel');
-seqPanel.addEventListener('touchstart', () => {
-  const ctx = initSeqAudioGraph();
-  unlockSeqAudio(ctx);
-  if (ctx.state === 'suspended') ctx.resume();
-}, { once: true, passive: true });
+seqPanel.addEventListener('pointerdown', warmSeqAudio, { passive: true });
 
 seqOverlay.addEventListener('click', (e) => {
   if (e.target === seqOverlay) closeSeq();
@@ -854,7 +918,7 @@ function loadPattern(idx) {
     p.classList.toggle('active', seqGrid[ti][si]);
   });
   document.querySelectorAll('.pat-btn').forEach((b,i) => b.classList.toggle('current', i===idx));
-  if (seqPlaying) { stopSeq(); startSeq(); }
+  if (seqPlaying) { stopSeq(); startSeq(false); }
 }
 
 const patBtns = document.getElementById('patternBtns');
@@ -862,26 +926,23 @@ PATTERN_NAMES.forEach((name, idx) => {
   const btn = document.createElement('button');
   btn.className = 'pat-btn' + (idx===0?' current':'');
   btn.textContent = name;
-  btn.addEventListener('click', () => loadPattern(idx));
+  btn.addEventListener('click', () => { warmSeqAudio(); loadPattern(idx); });
   patBtns.appendChild(btn);
 });
 
 // Load first pattern into pads on init — defer to ensure pads are in DOM
 setTimeout(() => loadPattern(0), 0);
 
-seqPlayBtn.addEventListener('click', async () => {
+seqPlayBtn.addEventListener('pointerdown', async (e) => {
+  e.preventDefault();
   if (seqPlaying) { stopSeq(); return; }
-  if (seqAudioCtx && seqAudioCtx.state === 'closed') {
-    seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
-  }
-  const ctx = initSeqAudioGraph();
-  unlockSeqAudio(ctx);
-  if (ctx.state === 'suspended') await ctx.resume();
-  startSeq();
+  const ctx = await ensureSeqAudioRunning();
+  if (!ctx) return;
+  startSeq(true);
 });
 seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
 document.getElementById('seqClose').addEventListener('click', closeSeq);
-seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq(); } });
+seqBpm.addEventListener('change', () => { if(seqPlaying) { stopSeq(); startSeq(false); } });
 
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeSeq(); });
@@ -889,7 +950,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeSeq(); });
 // ── Triggers ─────────────────────────────────────────────────────────────
 
 // Visible seq button bottom left
-document.getElementById('seqTrigger').addEventListener('click', openSeq);
+document.getElementById('seqTrigger').addEventListener('pointerdown', () => {
+  warmSeqAudio();
+  openSeq();
+});
 // Konami code
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
 let ki=0;
