@@ -459,9 +459,18 @@ const TRACKS = [
   { name: 'Arp 1', type: 'arp1'  },
   { name: 'Arp 2', type: 'arp2'  },
 ];
-// Chord pools — Cm and Fm across 2 octaves
-const ARP_POOL_1 = [130.81,155.56,174.61,195.99,233.08,261.63,311.13,349.23,391.99,466.16];
-const ARP_POOL_2 = [174.61,207.65,233.08,261.63,311.13,349.23,415.30,466.16,523.25,622.25];
+// All melodic elements locked to C minor — bass, arp1, arp2 speak the same language
+// C natural minor scale across 3 octaves
+const CM_ROOT  = 65.41;   // C2 — bass root
+const CM_SCALE = [
+  65.41, 73.42, 77.78, 87.31, 98.00, 103.83, 116.54,  // C2 octave
+  130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08, // C3 octave
+  261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, // C4 octave
+];
+// Arp 1 — upper voicing (C3 and above, brighter)
+const ARP_POOL_1 = [155.56, 174.61, 196.00, 207.65, 233.08, 261.63, 293.66, 311.13, 349.23, 392.00];
+// Arp 2 — lower/mid voicing (C2-C3, warmer, fills the space under Arp 1)
+const ARP_POOL_2 = [65.41, 73.42, 77.78, 87.31, 98.00, 103.83, 116.54, 130.81, 146.83, 155.56];
 const STEPS = 16;
 let seqGrid = TRACKS.map(() => Array(STEPS).fill(false));
 let seqPlaying = false, seqStep = 0, seqInterval = null;
@@ -551,59 +560,100 @@ function playClap(ctx, t) {
   }
 }
 function playBass(ctx, t) {
-  const o=ctx.createOscillator(), g=ctx.createGain(), f=ctx.createBiquadFilter();
-  o.type='sine'; f.type='lowpass'; f.frequency.value=200;
-  o.connect(f); f.connect(g); g.connect(out(ctx));
-  o.frequency.setValueAtTime(60,t);
-  o.frequency.exponentialRampToValueAtTime(40,t+0.3);
-  g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
-  o.start(t); o.stop(t+0.4);
+  // Tonal sub bass — C2 root, slow decay, stays pitched throughout
+  const freq = CM_ROOT; // always C2 — locks to the key
+  const decay = 0.7;
+
+  // Sub sine fundamental
+  const sub = ctx.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.setValueAtTime(freq, t);
+
+  // Second harmonic for warmth (one octave up, quieter)
+  const harm = ctx.createOscillator();
+  harm.type = 'sine';
+  harm.frequency.setValueAtTime(freq * 2, t);
+
+  const subGain = ctx.createGain();
+  const harmGain = ctx.createGain();
+  const master = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(400, t);
+  filter.frequency.exponentialRampToValueAtTime(180, t + decay);
+  filter.Q.value = 1;
+
+  sub.connect(subGain); subGain.gain.value = 0.8;
+  harm.connect(harmGain); harmGain.gain.value = 0.15;
+  subGain.connect(filter); harmGain.connect(filter);
+  filter.connect(master); master.connect(out(ctx));
+
+  master.gain.setValueAtTime(0.7, t);
+  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
+
+  sub.start(t); sub.stop(t + decay);
+  harm.start(t); harm.stop(t + decay);
 }
+// Arp 1 moves stepwise through the scale rather than fully random
+let arp1Idx = 0;
 function playArp1(ctx, t, pool) {
-  // Supersaw — 4 detuned saws through a filter sweep. Think 2000s R&B synth.
-  const freq = pool[Math.floor(Math.random() * pool.length)];
-  const vel = 0.18 + Math.random() * 0.12;
-  const decay = 0.4 + Math.random() * 0.2;
-  const detunes = [-8, -2, 0, 2, 8]; // cents
+  // Stepwise with occasional skip — melodic not random
+  const step = Math.random() < 0.7 ? 1 : (Math.random() < 0.5 ? 2 : -1);
+  arp1Idx = (arp1Idx + step + pool.length) % pool.length;
+  const freq = pool[arp1Idx];
+  const vel = 0.2 + Math.random() * 0.08;
+  const decay = 0.35;
+  const pan = (Math.random() * 2 - 1) * 0.5;
+
+  // Supersaw — detuned for width
+  const detunes = [-6, -1, 0, 1, 6];
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(freq * 8, t);
-  filter.frequency.exponentialRampToValueAtTime(freq * 1.5, t + decay);
-  filter.Q.value = 4;
+  filter.frequency.setValueAtTime(freq * 6, t);
+  filter.frequency.exponentialRampToValueAtTime(freq * 2, t + decay);
+  filter.Q.value = 3;
   const master = ctx.createGain();
+  const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   master.gain.setValueAtTime(vel, t);
   master.gain.exponentialRampToValueAtTime(0.001, t + decay);
-  filter.connect(master); master.connect(out(ctx));
-  detunes.forEach((d, i) => {
+  filter.connect(master);
+  if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.value = pan; }
+  else { master.connect(out(ctx)); }
+  detunes.forEach(d => {
     const o = ctx.createOscillator();
     o.type = 'sawtooth';
     o.frequency.setValueAtTime(freq * Math.pow(2, d/1200), t);
-    const pg = ctx.createGain(); pg.gain.value = 0.2;
-    o.connect(pg); pg.connect(filter);
+    const g = ctx.createGain(); g.gain.value = 0.18;
+    o.connect(g); g.connect(filter);
     o.start(t); o.stop(t + decay);
   });
 }
 
+// Arp 2 moves in the opposite direction to Arp 1 — creates counterpoint
+let arp2Idx = 4;
 function playArp2(ctx, t, pool) {
-  // Warm Rhodes-style — sine + slight harmonics, long tail. Think Frank Ocean.
-  const freq = pool[Math.floor(Math.random() * pool.length)];
-  const vel = 0.22 + Math.random() * 0.1;
-  const decay = 0.8 + Math.random() * 0.4;
-  const pan = (Math.random() * 2 - 1) * 0.6;
+  // Tends to move down or stay — counterpoint to Arp 1
+  const step = Math.random() < 0.6 ? -1 : (Math.random() < 0.5 ? 0 : 1);
+  arp2Idx = (arp2Idx + step + pool.length) % pool.length;
+  const freq = pool[arp2Idx];
+  const vel = 0.18 + Math.random() * 0.08;
+  const decay = 0.9;
+  const pan = (Math.random() * 2 - 1) * 0.4;
   const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   const master = ctx.createGain();
   master.gain.setValueAtTime(vel, t);
   master.gain.exponentialRampToValueAtTime(0.001, t + decay);
   if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.setValueAtTime(pan, t); }
   else { master.connect(out(ctx)); }
-  // Fundamental + harmonics
-  [[1,0.7],[2,0.15],[3,0.08],[4,0.04]].forEach(([ratio, amp]) => {
+  // Rhodes — sine fundamental with decaying harmonics
+  [[1,0.65],[2,0.18],[3,0.09],[4,0.04]].forEach(([ratio, amp]) => {
     const o = ctx.createOscillator();
     o.type = 'sine';
     o.frequency.setValueAtTime(freq * ratio, t);
     const g = ctx.createGain();
-    g.gain.setValueAtTime(amp, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + decay * (1/ratio));
+    g.gain.setValueAtTime(amp * vel * 1.4, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + decay / ratio);
     o.connect(g); g.connect(master);
     o.start(t); o.stop(t + decay);
   });
