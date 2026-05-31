@@ -142,7 +142,7 @@
     .seq-panel { width: 96vw; padding: 16px 12px; }
     .seq-close { top: 10px; right: 12px; font-size: 8px; }
     .seq-title { font-size: 9px; margin-bottom: 12px; }
-    #patternBtns { flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    #patternBtns { flex-wrap: wrap; width: 100%; gap: 5px; margin-bottom: 12px; }
     .pat-btn { font-size: 7px; padding: 4px 8px; letter-spacing: 0.1em; }
     .seq-row { gap: 4px; margin-bottom: 4px; }
     .seq-label { font-size: 7px; width: 32px; }
@@ -209,10 +209,11 @@
     position: relative;
   }
   .seq-pad.active { background: var(--gold); border-color: var(--gold); }
-  .seq-pad.melodic.active { background: #A8874A !important; border-color: #A8874A !important; }
   .seq-pad.melodic { background: #1a1410; border-color: #2a2018; }
-  .seq-label.melodic { color: #A8874A !important; }
-  .seq-pad.playing { background: #fff; border-color: #fff; }
+  .seq-pad.melodic.active { background: var(--warm-gold); border-color: var(--warm-gold); }
+  .seq-label.melodic { color: var(--warm-gold); }
+  .seq-pad.playing:not(.melodic) { background: #fff; border-color: #fff; }
+  .seq-pad.melodic.playing:not(.active) { background: rgba(168,135,74,0.4); border-color: var(--warm-gold); }
   .seq-pad.beat-4::after {
     content:''; position:absolute; left:-3px; top:0; bottom:0;
     width:1px; background: rgba(91,127,166,0.25);
@@ -522,18 +523,21 @@ TRACKS.forEach((track, ti) => {
 function getPad(ti, si) { return seqRowsEl.querySelector(`[data-track="${ti}"][data-step="${si}"]`); }
 
 let seqAudioCtx = null, seqMaster = null, seqAnalyser = null, seqData = null;
-function getSeqCtx() {
-  if (!seqAudioCtx) {
-    seqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    seqMaster = seqAudioCtx.createGain();
-    seqAnalyser = seqAudioCtx.createAnalyser();
-    seqAnalyser.fftSize = 128;
-    seqMaster.connect(seqAnalyser);
-    seqAnalyser.connect(seqAudioCtx.destination);
-    seqData = new Uint8Array(seqAnalyser.frequencyBinCount);
-  }
-  if (seqAudioCtx.state === 'suspended') seqAudioCtx.resume();
+function initSeqAudioGraph() {
+  if (seqAudioCtx && seqAudioCtx.state !== 'closed') return seqAudioCtx;
+  seqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  seqMaster = seqAudioCtx.createGain();
+  seqAnalyser = seqAudioCtx.createAnalyser();
+  seqAnalyser.fftSize = 128;
+  seqMaster.connect(seqAnalyser);
+  seqAnalyser.connect(seqAudioCtx.destination);
+  seqData = new Uint8Array(seqAnalyser.frequencyBinCount);
   return seqAudioCtx;
+}
+function getSeqCtx() {
+  const ctx = initSeqAudioGraph();
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
 }
 function out(ctx) { return seqMaster || ctx.destination; }
 
@@ -767,19 +771,17 @@ setTimeout(() => loadPattern(0), 0);
 
 seqPlayBtn.addEventListener('click', () => {
   if (seqPlaying) { stopSeq(); return; }
-  // iOS requires AudioContext created AND a silent buffer played 
-  // synchronously inside the tap handler to unlock audio
-  if (!seqAudioCtx || seqAudioCtx.state === 'closed') {
+  // iOS: create context + play silent buffer synchronously inside tap handler
+  if (seqAudioCtx && seqAudioCtx.state === 'closed') {
     seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
   }
-  const ctx = getSeqCtx();
-  // Unlock with silent buffer — iOS requirement
+  const ctx = initSeqAudioGraph();
   const unlock = ctx.createBufferSource();
-  unlock.buffer = ctx.createBuffer(1, 1, 22050);
-  unlock.connect(ctx.destination);
+  unlock.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  unlock.connect(seqMaster);
   unlock.start(0);
-  const go = () => startSeq();
-  if (ctx.state === 'suspended') { ctx.resume().then(go); } else { go(); }
+  if (ctx.state === 'suspended') ctx.resume();
+  startSeq();
 });
 seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
 document.getElementById('seqClose').addEventListener('click', closeSeq);
