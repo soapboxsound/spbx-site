@@ -473,7 +473,7 @@ const seqBpm = document.getElementById('seqBpm');
 const seqRowsEl = document.getElementById('seqRows');
 
 TRACKS.forEach((track, ti) => {
-  const isMelodic = track.type === 'pluck' || track.type === 'chord';
+  const isMelodic = track.type === 'arp1' || track.type === 'arp2';
   const row = document.createElement('div');
   row.className = 'seq-row';
   const label = document.createElement('div');
@@ -559,46 +559,54 @@ function playBass(ctx, t) {
   g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
   o.start(t); o.stop(t+0.4);
 }
-function playArp(ctx, t, pool, decay) {
+function playArp1(ctx, t, pool) {
+  // Supersaw — 4 detuned saws through a filter sweep. Think 2000s R&B synth.
   const freq = pool[Math.floor(Math.random() * pool.length)];
-  const vel = 0.25 + Math.random() * 0.35; // velocity randomization
-  const pan = (Math.random() * 2 - 1) * 0.7; // stereo spread
+  const vel = 0.18 + Math.random() * 0.12;
+  const decay = 0.4 + Math.random() * 0.2;
+  const detunes = [-8, -2, 0, 2, 8]; // cents
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(freq * 8, t);
+  filter.frequency.exponentialRampToValueAtTime(freq * 1.5, t + decay);
+  filter.Q.value = 4;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(vel, t);
+  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  filter.connect(master); master.connect(out(ctx));
+  detunes.forEach((d, i) => {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(freq * Math.pow(2, d/1200), t);
+    const pg = ctx.createGain(); pg.gain.value = 0.2;
+    o.connect(pg); pg.connect(filter);
+    o.start(t); o.stop(t + decay);
+  });
+}
 
-  // FM synthesis — carrier + modulator
-  const carrier = ctx.createOscillator();
-  const modulator = ctx.createOscillator();
-  const modGain = ctx.createGain();
-  const ampGain = ctx.createGain();
-  const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
-
-  carrier.type = 'sine';
-  modulator.type = 'sine';
-  carrier.frequency.setValueAtTime(freq, t);
-  modulator.frequency.setValueAtTime(freq * 2.1, t); // modulator ratio
-  modGain.gain.setValueAtTime(freq * 1.5, t); // modulation depth
-  modGain.gain.exponentialRampToValueAtTime(freq * 0.2, t + decay);
-
-  modulator.connect(modGain);
-  modGain.connect(carrier.frequency);
-  carrier.connect(ampGain);
-
-  if (ctx.createStereoPanner) {
-    ampGain.connect(panner);
-    panner.connect(out(ctx));
-    panner.pan.setValueAtTime(pan, t);
-  } else {
-    ampGain.connect(out(ctx));
-  }
-
-  ampGain.gain.setValueAtTime(vel, t);
-  ampGain.gain.exponentialRampToValueAtTime(0.001, t + decay);
-
-  // Slight pitch glide up on attack
-  carrier.frequency.setValueAtTime(freq * 0.98, t);
-  carrier.frequency.exponentialRampToValueAtTime(freq, t + 0.03);
-
-  modulator.start(t); modulator.stop(t + decay);
-  carrier.start(t); carrier.stop(t + decay);
+function playArp2(ctx, t, pool) {
+  // Warm Rhodes-style — sine + slight harmonics, long tail. Think Frank Ocean.
+  const freq = pool[Math.floor(Math.random() * pool.length)];
+  const vel = 0.22 + Math.random() * 0.1;
+  const decay = 0.8 + Math.random() * 0.4;
+  const pan = (Math.random() * 2 - 1) * 0.6;
+  const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(vel, t);
+  master.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  if (panner) { master.connect(panner); panner.connect(out(ctx)); panner.pan.setValueAtTime(pan, t); }
+  else { master.connect(out(ctx)); }
+  // Fundamental + harmonics
+  [[1,0.7],[2,0.15],[3,0.08],[4,0.04]].forEach(([ratio, amp]) => {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq * ratio, t);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(amp, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + decay * (1/ratio));
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + decay);
+  });
 }
 function triggerSound(ti, t) {
   const ctx = getSeqCtx();
@@ -608,8 +616,8 @@ function triggerSound(ti, t) {
   if (type==='hihat') playHihat(ctx,t);
   if (type==='clap')  playClap(ctx,t);
   if (type==='bass')  playBass(ctx,t);
-  if (type==='arp1') playArp(ctx,t,ARP_POOL_1,0.25);
-  if (type==='arp2') playArp(ctx,t,ARP_POOL_2,0.5);
+  if (type==='arp1') playArp1(ctx,t,ARP_POOL_1);
+  if (type==='arp2') playArp2(ctx,t,ARP_POOL_2);
 }
 
 function drawSeqMeter() {
