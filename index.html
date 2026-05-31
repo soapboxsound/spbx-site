@@ -139,6 +139,20 @@
     .logo img { height: 48px; }
     .logo { margin-bottom: 40px; }
     .mic-btn { bottom: 24px; right: 24px; }
+    .seq-panel { width: 96vw; padding: 16px 12px; }
+    .seq-close { top: 10px; right: 12px; font-size: 8px; }
+    .seq-title { font-size: 9px; margin-bottom: 12px; }
+    #patternBtns { flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .pat-btn { font-size: 7px; padding: 4px 8px; letter-spacing: 0.1em; }
+    .seq-row { gap: 4px; margin-bottom: 4px; }
+    .seq-label { font-size: 7px; width: 32px; }
+    .seq-pads { gap: 2px; }
+    .seq-pad { height: 20px; }
+    .seq-controls { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .seq-btn { font-size: 8px; padding: 6px 14px; }
+    .seq-bpm-wrap { gap: 6px; }
+    .seq-bpm-label { font-size: 8px; }
+    .seq-bpm { font-size: 11px; width: 36px; }
   }
 
   /* 808 Sequencer */
@@ -705,16 +719,8 @@ function startSeq() {
   const bpm=parseInt(seqBpm.value)||90;
   const ms=(60/bpm/4)*1000;
   seqPlaying=true; seqPlayBtn.textContent='Stop'; seqPlayBtn.classList.add('playing');
-  // Always create a fresh AudioContext if needed — iOS requires this inside a tap handler
-  if (!seqAudioCtx || seqAudioCtx.state === 'closed') {
-    seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
-  }
-  const ctx = getSeqCtx();
-  const go = () => {
-    if (!active) { cancelAnimationFrame(animId); drawSeqMeter(); }
-    seqTick(); seqInterval=setInterval(seqTick,ms);
-  };
-  if (ctx.state === 'suspended') { ctx.resume().then(go); } else { go(); }
+  if (!active) { cancelAnimationFrame(animId); drawSeqMeter(); }
+  seqTick(); seqInterval=setInterval(seqTick,ms);
 }
 function stopSeq() {
   seqPlaying=false; clearInterval(seqInterval);
@@ -760,8 +766,20 @@ PATTERN_NAMES.forEach((name, idx) => {
 setTimeout(() => loadPattern(0), 0);
 
 seqPlayBtn.addEventListener('click', () => {
-  if (seqAudioCtx && seqAudioCtx.state === 'suspended') seqAudioCtx.resume();
-  seqPlaying ? stopSeq() : startSeq();
+  if (seqPlaying) { stopSeq(); return; }
+  // iOS requires AudioContext created AND a silent buffer played 
+  // synchronously inside the tap handler to unlock audio
+  if (!seqAudioCtx || seqAudioCtx.state === 'closed') {
+    seqAudioCtx = null; seqMaster = null; seqAnalyser = null; seqData = null;
+  }
+  const ctx = getSeqCtx();
+  // Unlock with silent buffer — iOS requirement
+  const unlock = ctx.createBufferSource();
+  unlock.buffer = ctx.createBuffer(1, 1, 22050);
+  unlock.connect(ctx.destination);
+  unlock.start(0);
+  const go = () => startSeq();
+  if (ctx.state === 'suspended') { ctx.resume().then(go); } else { go(); }
 });
 seqClearBtn.addEventListener('click', () => { stopSeq(); for(let ti=0;ti<TRACKS.length;ti++) for(let si=0;si<STEPS;si++) seqGrid[ti][si]=false; document.querySelectorAll('.seq-pad').forEach(p=>p.classList.remove('active')); });
 document.getElementById('seqClose').addEventListener('click', closeSeq);
