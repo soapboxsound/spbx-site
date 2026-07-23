@@ -1,0 +1,16 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "spbx.io" }],
+      "destination": "https://www.spbx.io/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "spbx.io" }],
+      "destination": "https://www.spbx.io/:path*",
+      "permanent": true
+    }
+  ]
+}

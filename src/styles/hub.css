@@ -1,0 +1,338 @@
+/* Hub — spbxsound.com ripple canvas + SPBX Review ambient backdrop */
+
+body {
+  background:
+    radial-gradient(ellipse 60% 50% at 85% 10%, color-mix(in srgb, var(--accent-blue) 4%, transparent) 0%, transparent 70%),
+    var(--bg-primary);
+  background-color: var(--bg-primary);
+}
+
+#ripple {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.spbx-page-droplets {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.spbx-droplet {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.spbx-droplet--accent {
+  width: min(70vw, 640px);
+  height: min(62vh, 560px);
+  top: -18%;
+  right: -14%;
+  filter: blur(40px);
+}
+
+.spbx-droplet--accent-2 {
+  width: min(52vw, 480px);
+  height: min(46vh, 420px);
+  top: 32%;
+  right: 6%;
+  filter: blur(48px);
+}
+
+.spbx-droplet--identity {
+  width: min(56vw, 520px);
+  height: min(50vh, 460px);
+  bottom: -20%;
+  left: -16%;
+  filter: blur(44px);
+}
+
+body.theme-dark .spbx-droplet--accent {
+  background: radial-gradient(
+    ellipse at 42% 48%,
+    rgba(91, 127, 166, 0.38) 0%,
+    rgba(91, 127, 166, 0.14) 32%,
+    rgba(91, 127, 166, 0.05) 52%,
+    transparent 72%
+  );
+}
+
+body.theme-dark .spbx-droplet--accent-2 {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(91, 127, 166, 0.22) 0%,
+    rgba(91, 127, 166, 0.08) 40%,
+    transparent 70%
+  );
+}
+
+body.theme-dark .spbx-droplet--identity {
+  background: radial-gradient(
+    ellipse at 55% 50%,
+    rgba(168, 135, 74, 0.28) 0%,
+    rgba(168, 135, 74, 0.1) 38%,
+    transparent 72%
+  );
+}
+
+body.theme-light .spbx-droplet--accent {
+  background: radial-gradient(
+    ellipse at 42% 48%,
+    rgba(91, 127, 166, 0.18) 0%,
+    rgba(91, 127, 166, 0.08) 32%,
+    rgba(91, 127, 166, 0.03) 52%,
+    transparent 72%
+  );
+}
+
+body.theme-light .spbx-droplet--accent-2 {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(91, 127, 166, 0.12) 0%,
+    rgba(91, 127, 166, 0.05) 40%,
+    transparent 70%
+  );
+}
+
+body.theme-light .spbx-droplet--identity {
+  background: radial-gradient(
+    ellipse at 55% 50%,
+    rgba(168, 135, 74, 0.12) 0%,
+    rgba(168, 135, 74, 0.05) 38%,
+    transparent 72%
+  );
+}
+
+.hub {
+  position: relative;
+  z-index: 1;
+  --hub-max: 960px;
+  --hub-gutter: 48px;
+}
+
+/* ── Hero (spbxsound.com editorial frame) ── */
+.hero-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: 48px var(--hub-gutter) 64px;
+}
+
+.hub-logo {
+  display: block;
+  height: 88px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 52px;
+  opacity: 0.92;
+  animation: spbxFadeUp 1.1s ease both;
+}
+
+.hero-screen h1 {
+  font-size: clamp(44px, 9vw, 80px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  animation: spbxFadeUp 1.1s ease both 0.35s;
+}
+
+.hero-screen h1 em {
+  font-style: italic;
+  color: var(--brand-color);
+}
+
+.hero-screen .eyebrow {
+  max-width: none;
+  line-height: 1.55;
+  margin-bottom: 52px;
+  animation: spbxFadeUp 1.1s ease both 0.55s;
+}
+
+.hero-screen .rule {
+  margin-bottom: 28px;
+  animation: spbxFadeUp 1.1s ease both 0.75s;
+}
+
+.hero-lede {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  max-width: 52em;
+  margin: 0 0 1em;
+  animation: spbxFadeUp 1.1s ease both 0.95s;
+}
+
+.hero-screen .hero-lede:last-of-type {
+  margin-bottom: 52px;
+}
+
+.hero-actions {
+  animation: spbxFadeUp 1.1s ease both 1.15s;
+}
+
+.hub-nav-fixed {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.hub-nav-fixed a {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent-blue) 55%, transparent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.hub-nav-fixed a:hover {
+  color: var(--accent-gold);
+}
+
+.hub-mark {
+  position: fixed;
+  top: 28px;
+  left: 28px;
+  z-index: 10;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-hint);
+}
+
+/* ── Scroll sections ── */
+.hub-body {
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: 0 var(--hub-gutter) 80px;
+}
+
+.hub-section {
+  padding-top: 64px;
+  border-top: 1px solid var(--border);
+}
+
+.hub-section h2 {
+  font-size: clamp(28px, 5vw, 36px);
+  margin-bottom: 20px;
+}
+
+.hub-section p {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 300;
+  line-height: 1.65;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+}
+
+.hub-section p:last-child {
+  margin-bottom: 0;
+}
+
+.pillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 48px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.pillar {
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+  padding: 28px 24px;
+  border: none;
+}
+
+.pillar .eyebrow {
+  color: var(--brand-color);
+  letter-spacing: 0.16em;
+  margin-bottom: 12px;
+}
+
+.pillar p {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.contact-email {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--accent-gold);
+  margin-top: 20px;
+  display: inline-block;
+}
+
+.contact-email:hover {
+  color: var(--text-primary);
+}
+
+.hub-footer {
+  max-width: var(--hub-max);
+  margin: 0 auto;
+  padding: 24px var(--hub-gutter) 48px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 720px) {
+  .hub {
+    --hub-gutter: 28px;
+  }
+
+  .hub-logo {
+    height: 60px;
+    margin-bottom: 40px;
+  }
+
+  .hero-screen .eyebrow {
+    margin-bottom: 36px;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+  }
+
+  .pillars {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-nav-fixed {
+    top: 20px;
+    right: 20px;
+    gap: 16px;
+  }
+
+  .hub-mark {
+    top: 20px;
+    left: 20px;
+  }
+}

@@ -1,0 +1,63 @@
+---
+import { ADMIN_URL, NAV } from '../consts';
+---
+
+<span class="hub-mark">
+  <a href="/" style="color: inherit; text-decoration: none;">spbx.io</a>
+</span>
+<nav class="hub-nav-fixed" aria-label="Site">
+  <button
+    type="button"
+    class="hub-nav-toggle"
+    aria-expanded="false"
+    aria-controls="hub-nav-menu"
+    aria-label="Open menu"
+  >
+    <span class="hub-nav-toggle-icon"></span>
+  </button>
+  <div class="hub-nav-menu" id="hub-nav-menu">
+    {
+      NAV.map((item) => (
+        <a href={item.href} data-nav={item.href}>
+          {item.label}
+        </a>
+      ))
+    }
+    <a href={ADMIN_URL}>Sign in</a>
+    <button type="button" class="theme-toggle" aria-label="Toggle light/dark mode">
+      <svg
+        class="theme-toggle-icon theme-toggle-icon--sun"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="4"></circle>
+        <path
+          d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+        ></path>
+      </svg>
+      <svg
+        class="theme-toggle-icon theme-toggle-icon--moon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a6.5 6.5 0 0 0 11.5 11.5z"></path>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<script>
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  document.querySelectorAll('[data-nav]').forEach((link) => {
+    const href = link.getAttribute('data-nav');
+    if (href && (path === href || path.startsWith(href + '/'))) {
+      link.setAttribute('aria-current', 'page');
+    }
+  });
+</script>
