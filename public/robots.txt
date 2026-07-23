@@ -1,5 +1,0 @@
-# Marketing site only — do not crawl product hosts (admin, review, talent tenants).
-User-agent: *
-Allow: /
-
-Sitemap: https://www.spbx.io/sitemap-index.xml
