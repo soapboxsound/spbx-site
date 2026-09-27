@@ -148,6 +148,10 @@
 
   window.spbxFaceTap = function (el) {
     if (document.body.classList.contains('is-booth')) return;
+    if (document.body.classList.contains('is-work')) {
+      if (typeof window.spbxReelFace === 'function') window.spbxReelFace(el);
+      return;
+    }
     if (document.querySelector('.game-overlay.open, .seq-overlay.open, .stem-overlay.open')) return;
     const color = faceFrom(el);
     if (!color) return;

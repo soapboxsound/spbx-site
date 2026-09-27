@@ -26,16 +26,62 @@
   const boost = cubes.map(() => 0);
   const t0 = performance.now();
 
-  window.spbxTurn = function (deg) {
+  window.spbxTurn = function (deg, replace) {
     if (reduce || !cubes.length) return;
-    boost[0] += deg;
+    if (replace) boost[0] = deg;
+    else boost[0] += deg;
+  };
+
+  window.spbxSetY = function (ry) {
+    if (!cubes.length) return;
+    cubeY[0] = ry;
+    boost[0] = 0;
+  };
+
+  window.spbxPose = { rx: REST_X, ry: 32 };
+
+  window.spbxFacingFace = function () {
+    const rx = window.spbxPose.rx;
+    const ry = window.spbxPose.ry;
+    const faces = [
+      { key: 'front', z: visZ(0, 0, 1, rx, ry) },
+      { key: 'right', z: visZ(1, 0, 0, rx, ry) },
+      { key: 'back', z: visZ(0, 0, -1, rx, ry) },
+      { key: 'left', z: visZ(-1, 0, 0, rx, ry) }
+    ];
+    faces.sort((a, b) => b.z - a.z);
+    return faces[0].key;
+  };
+
+  window.spbxFaceVis = function () {
+    const rx = window.spbxPose.rx;
+    const ry = window.spbxPose.ry;
+    return {
+      front: visZ(0, 0, 1, rx, ry),
+      right: visZ(1, 0, 0, rx, ry),
+      back: visZ(0, 0, -1, rx, ry),
+      left: visZ(-1, 0, 0, rx, ry)
+    };
+  };
+
+  window.spbxFaceDepth = function () {
+    const rx = window.spbxPose.rx;
+    const ry = window.spbxPose.ry;
+    return {
+      front: faceZ(0, 0, 1, rx, ry),
+      right: faceZ(1, 0, 0, rx, ry),
+      back: faceZ(0, 0, -1, rx, ry),
+      left: faceZ(-1, 0, 0, rx, ry)
+    };
   };
 
   window.spbxSpin = function (dx, dy) {
     if (!cubes.length) return;
     boost[0] += dx * 0.62;
     dragVel += dx * 0.045;
-    if (typeof dy === 'number') xVel[0] += dy * 0.07;
+    if (typeof dy === 'number' && !document.body.classList.contains('is-reel')) {
+      xVel[0] += dy * 0.07;
+    }
   };
 
   function wrap180(a) {
@@ -43,6 +89,10 @@
   }
 
   function visZ(nx, ny, nz, rxDeg, ryDeg) {
+    return Math.max(0, faceZ(nx, ny, nz, rxDeg, ryDeg));
+  }
+
+  function faceZ(nx, ny, nz, rxDeg, ryDeg) {
     const rx = rxDeg * Math.PI / 180;
     const ry = ryDeg * Math.PI / 180;
     const cy = Math.cos(ry), sy = Math.sin(ry);
@@ -50,8 +100,7 @@
     const x = nx * cy + nz * sy;
     const z = -nx * sy + nz * cy;
     const y = ny;
-    const zCam = y * sx + z * cx;
-    return Math.max(0, zCam);
+    return y * sx + z * cx;
   }
 
   function lightRoom(rx, ry) {
@@ -111,7 +160,11 @@
       const rx = REST_X + wrap180(cubeX[i]);
       const ry = cubeY[i];
       el.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-      if (i === 0) lightRoom(rx, ry);
+      if (i === 0) {
+        window.spbxPose.rx = rx;
+        window.spbxPose.ry = ry;
+        lightRoom(rx, ry);
+      }
     });
 
     if (rig) {
