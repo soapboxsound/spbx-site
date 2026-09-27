@@ -146,9 +146,20 @@
     top: calc(var(--gap) / 2);
     border-radius: var(--rad);
     backface-visibility: hidden;
+    pointer-events: auto;
     box-shadow:
       inset 2px 3px 7px rgba(255,255,255,0.05),
       inset -3px -5px 9px rgba(0,0,0,0.18);
+  }
+  .sculpture.is-lit .cf-top,
+  .sculpture.is-lit .cf-bottom {
+    box-shadow:
+      inset 2px 3px 10px rgba(255,236,180,0.28),
+      inset -3px -5px 9px rgba(0,0,0,0.12),
+      0 0 28px rgba(184,151,58,0.55);
+  }
+  .sculpture.is-lit .halo {
+    background: radial-gradient(circle, rgba(184,151,58,0.4) 0%, transparent 68%);
   }
   .cf-front { background: #4A7FA5; transform: rotateY(0deg) translateZ(calc(var(--s) / 2)); }
   .cf-back { background: #4A7FA5; transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
@@ -277,6 +288,16 @@
     letter-spacing: 0.03em;
     color: var(--dim);
   }
+  .booth-listen {
+    background: none; border: none; padding: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300; font-style: italic;
+    font-size: clamp(15px, 2.1vw, 22px);
+    letter-spacing: 0.02em;
+    color: var(--dim);
+    cursor: pointer;
+  }
+  .booth-listen.is-on { color: #B8973A; }
   .nav-dot.is-here .nav-dot-inner { background: rgba(91,127,166,0.85); }
   .nav-dot.is-here .nav-dot-label { opacity: 0.9; }
   @media (prefers-reduced-motion: reduce) {
@@ -540,18 +561,25 @@
   }
   .game-trigger:hover .game-trigger-mark { background: rgba(91,127,166,0.7); }
   .game-overlay {
-    position: fixed; inset: 0; z-index: 80;
-    background: rgba(0,0,0,0.94);
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.92);
     display: flex; align-items: center; justify-content: center;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transition: opacity 0.4s ease, visibility 0.4s ease;
+    isolation: isolate;
   }
   .game-overlay.open {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+  }
+  body:has(.game-overlay.open) .chamber,
+  body:has(.game-overlay.open) .brand,
+  body:has(.seq-overlay.open) .chamber,
+  body:has(.seq-overlay.open) .brand {
+    visibility: hidden;
   }
   .game-panel {
     width: 90vw; max-width: 440px;
@@ -587,6 +615,77 @@
     .game-trigger { bottom: 44px; left: 10px; }
     .game-panel { padding: 36px 14px 18px; }
     .game-stage { height: min(52vh, 420px); }
+  }
+
+  .stem-overlay { z-index: 201; }
+  .stem-stage {
+    margin-top: 8px;
+  }
+  .stem-tray {
+    display: flex; justify-content: center;
+    min-height: 72px;
+    margin-bottom: 28px;
+  }
+  .stem-chip {
+    width: 64px; height: 64px;
+    border: 1px solid var(--gold-dim);
+    background: #141414;
+    cursor: grab;
+    touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    animation: stemPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes stemPulse {
+    0%, 100% { border-color: rgba(91,127,166,0.28); }
+    50% { border-color: rgba(184,151,58,0.55); }
+  }
+  .stem-chip.is-origin { opacity: 0.28; animation: none; }
+  .stem-chip.is-drag {
+    position: fixed;
+    z-index: 220;
+    pointer-events: none;
+    cursor: grabbing;
+    animation: none;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+  }
+  .stem-chip-mark {
+    width: 18px; height: 18px;
+    border-radius: 3px;
+    background: rgba(240,237,230,0.16);
+  }
+  .stem-beds {
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  .stem-bed {
+    flex: 1;
+    min-height: 118px;
+    border: 1px solid rgba(240,237,230,0.08);
+    background: none;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .stem-bed-face {
+    width: 44px; height: 44px;
+    border-radius: 8px;
+  }
+  .stem-bed[data-bed="gold"] .stem-bed-face { background: #B8973A; }
+  .stem-bed[data-bed="blue"] .stem-bed-face { background: #4A7FA5; }
+  .stem-bed[data-bed="ink"] .stem-bed-face { background: #1a1a1a; box-shadow: inset 0 0 0 1px rgba(240,237,230,0.28); }
+  .stem-bed.is-over { border-color: rgba(240,237,230,0.32); background: rgba(240,237,230,0.03); }
+  .stem-bed.is-locked { border-color: rgba(184,151,58,0.45); pointer-events: none; }
+  .stem-bed.is-locked[data-bed="gold"] { background: rgba(184,151,58,0.12); }
+  .stem-bed.is-locked[data-bed="blue"] { background: rgba(74,127,165,0.12); }
+  .stem-bed.is-locked[data-bed="ink"] { background: rgba(240,237,230,0.04); }
+  @media (max-width: 500px) {
+    .stem-chip { width: 56px; height: 56px; }
+    .stem-bed { min-height: 104px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stem-chip { animation: none; }
   }
 </style>
 </head>
@@ -629,6 +728,10 @@
     <section class="view" id="view-contact" data-view="contact">
       <a class="mail" href="mailto:hi@spbxsound.com">hi@spbxsound.com</a>
       <p class="mail-note">Be Seen. Be Heard. Be Understood.</p>
+    </section>
+    <section class="view" id="view-booth" data-view="booth">
+      <p class="about-kicker">The booth.</p>
+      <button type="button" class="booth-listen" id="boothListen">Listen</button>
     </section>
   </div>
 </div>
@@ -683,6 +786,24 @@
   </div>
 </div>
 
+<div class="game-overlay stem-overlay" id="stemOverlay">
+  <div class="game-panel" id="stemPanel">
+    <button class="seq-close" id="stemClose" type="button" aria-label="Close sort">&times;</button>
+    <div class="seq-header">
+      <div class="seq-title">Stems</div>
+      <div class="seq-lockup">
+        <img src="spbx-icon-master.svg" alt="" class="cube" />
+        <img src="Logo_White.png" alt="SPBX" class="seq-logo" />
+      </div>
+    </div>
+    <div class="stem-stage">
+      <div class="stem-tray" id="stemTray"></div>
+      <div class="stem-beds" id="stemBeds"></div>
+    </div>
+    <p class="game-msg" id="stemMsg">Which face?</p>
+  </div>
+</div>
+
 <script>
 const rippleCanvas = document.getElementById('ripple');
 const rCtx = rippleCanvas.getContext('2d');
@@ -694,7 +815,7 @@ let mix = 0.55, mixTarget = 0.55;
 const heardLine = document.querySelector('.line-heard');
 const cubeGrab = document.querySelector('.cube-grab');
 const floorHits = [];
-let cubeDrag = false, lastCX = 0, lastCY = 0, startCX = 0, startCY = 0;
+let cubeDrag = false, lastCX = 0, lastCY = 0, startCX = 0, startCY = 0, tapFace = null;
 
 window.spbxHit = function () {
   floorHits.push({ t: 0 });
@@ -724,6 +845,7 @@ if (cubeGrab) {
   cubeGrab.addEventListener('pointerdown', (e) => {
     cubeDrag = true;
     window.spbxDragging = true;
+    tapFace = e.target;
     lastCX = startCX = e.clientX;
     lastCY = startCY = e.clientY;
     document.body.classList.add('is-mixing');
@@ -732,7 +854,11 @@ if (cubeGrab) {
   });
   cubeGrab.addEventListener('pointerup', (e) => {
     const moved = Math.hypot(e.clientX - startCX, e.clientY - startCY) > 10;
-    if (!moved) window.spbxHit();
+    if (!moved) {
+      window.spbxHit();
+      if (typeof window.spbxFaceTap === 'function') window.spbxFaceTap(tapFace);
+    }
+    tapFace = null;
     cubeDrag = false;
     window.spbxDragging = false;
     document.body.classList.remove('is-mixing');
@@ -1353,6 +1479,7 @@ function stopSeq() {
 
 function openSeq() {
   if (typeof window.closeStack === 'function') window.closeStack();
+  if (typeof window.closeStems === 'function') window.closeStems();
   seqOverlay.classList.add('open');
 }
 function closeSeq() { stopSeq(); seqOverlay.classList.remove('open'); }
@@ -1411,6 +1538,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeSeq();
     if (typeof window.closeStack === 'function') window.closeStack();
+    if (typeof window.closeStems === 'function') window.closeStems();
   }
 });
 
@@ -1426,15 +1554,21 @@ const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRigh
 let ki=0;
 document.addEventListener('keydown', e => {
   ki = e.key===KONAMI[ki] ? ki+1 : (e.key===KONAMI[0] ? 1 : 0);
-  if (ki===KONAMI.length) { ki=0; openSeq(); }
+  if (ki===KONAMI.length) {
+    ki=0;
+    if (typeof window.openBooth === 'function') window.openBooth();
+    else location.hash = '#booth';
+  }
 });
 
 
 
 </script>
 <script src="world.js?v=spin"></script>
-<script src="rooms.js"></script>
+<script src="rooms.js?v=booth"></script>
 <script src="stack.js?v=4"></script>
+<script src="stems.js?v=3"></script>
+<script src="eggs.js?v=1"></script>
 
 
 <!-- Bio for SEO -->

@@ -265,6 +265,7 @@
 
   function openStack() {
     if (typeof window.closeSeq === 'function') window.closeSeq();
+    if (typeof window.closeStems === 'function') window.closeStems();
     overlay.classList.add('open');
     open = true;
     reset();

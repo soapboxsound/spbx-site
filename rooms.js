@@ -2,15 +2,17 @@
   const views = {
     home: document.getElementById('view-home'),
     about: document.getElementById('view-about'),
-    contact: document.getElementById('view-contact')
+    contact: document.getElementById('view-contact'),
+    booth: document.getElementById('view-booth')
   };
-  if (!views.home || !views.about || !views.contact) return;
+  if (!views.home || !views.about || !views.contact || !views.booth) return;
 
   const order = { about: 0, home: 1, contact: 2 };
   const titles = {
     home: 'SPBX Sound | Be Seen. Be Heard. Be Understood.',
     about: 'About | SPBX Sound',
-    contact: 'Contact | SPBX Sound'
+    contact: 'Contact | SPBX Sound',
+    booth: 'The Booth | SPBX Sound'
   };
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const navAbout = document.querySelector('.nav-dot-left');
@@ -30,7 +32,9 @@
       return;
     }
     const prev = current;
-    const dir = prev == null ? 0 : order[next] - order[prev];
+    const dir = prev == null || order[next] == null || order[prev] == null
+      ? 0
+      : order[next] - order[prev];
     const incoming = views[next];
     const outgoing = prev ? views[prev] : null;
     const animate = !first && !reduce && outgoing && dir !== 0;
@@ -69,6 +73,8 @@
     document.title = titles[room] || titles.home;
     navAbout.classList.toggle('is-here', room === 'about');
     navContact.classList.toggle('is-here', room === 'contact');
+    document.body.classList.toggle('is-booth', room === 'booth');
+    if (typeof window.spbxBooth === 'function') window.spbxBooth(room === 'booth');
   }
 
   function setRoom(room) {
@@ -85,6 +91,8 @@
       setRoom(room);
     });
   });
+
+  window.spbxRoom = setRoom;
 
   window.addEventListener('hashchange', () => go(roomFromHash()));
   go(roomFromHash());
