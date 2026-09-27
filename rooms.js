@@ -104,6 +104,14 @@
     });
   });
 
+  document.querySelectorAll('a[href^="mailto:"]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = el.href;
+    });
+  });
+
   window.spbxRoom = setRoom;
 
   window.addEventListener('hashchange', () => go(roomFromHash()));

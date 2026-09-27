@@ -12,8 +12,10 @@
     'cf-left': 'ink'
   };
 
+  const BOOTH_SRC = 'booth-private/TheLastOne_080126.mp3';
+  const boothAudio = document.getElementById('boothAudio');
+
   let audio;
-  let boothGraph = null;
   let boothOn = false;
   let seq = [];
   let seqTimer = 0;
@@ -49,69 +51,29 @@
     osc.stop(t + dur + 0.03);
   }
 
-  function buildBooth(ac) {
-    const master = ac.createGain();
-    master.gain.value = 0.0001;
-    master.connect(ac.destination);
-
-    const sub = ac.createOscillator();
-    const subGain = ac.createGain();
-    sub.type = 'sine';
-    sub.frequency.value = 55;
-    subGain.gain.value = 0.18;
-    sub.connect(subGain);
-    subGain.connect(master);
-
-    const pad = ac.createOscillator();
-    const pad2 = ac.createOscillator();
-    const padFilter = ac.createBiquadFilter();
-    const padGain = ac.createGain();
-    pad.type = 'triangle';
-    pad2.type = 'triangle';
-    pad.frequency.value = 110;
-    pad2.frequency.value = 164.8;
-    padFilter.type = 'lowpass';
-    padFilter.frequency.value = 380;
-    padFilter.Q.value = 2.8;
-    padGain.gain.value = 0.2;
-    const lfo = ac.createOscillator();
-    const lfoGain = ac.createGain();
-    lfo.frequency.value = 0.06;
-    lfoGain.gain.value = 160;
-    lfo.connect(lfoGain);
-    lfoGain.connect(padFilter.frequency);
-    pad.connect(padFilter);
-    pad2.connect(padFilter);
-    padFilter.connect(padGain);
-    padGain.connect(master);
-
-    const air = ac.createOscillator();
-    const airGain = ac.createGain();
-    const delay = ac.createDelay();
-    air.type = 'sine';
-    air.frequency.value = 659.25;
-    airGain.gain.value = 0.03;
-    delay.delayTime.value = 0.42;
-    air.connect(airGain);
-    airGain.connect(delay);
-    delay.connect(master);
-    airGain.connect(master);
-
-    [sub, pad, pad2, lfo, air].forEach((osc) => osc.start());
-    return master;
+  function syncListenBtn() {
+    if (!listenBtn) return;
+    listenBtn.classList.toggle('is-on', boothOn);
+    listenBtn.textContent = boothOn ? 'Listening.' : 'Listen';
   }
 
   function setBoothPlaying(on) {
-    const ac = ensureAudio();
-    if (!ac) return;
-    if (!boothGraph) boothGraph = buildBooth(ac);
+    if (!boothAudio) return;
     boothOn = !!on;
-    boothGraph.gain.cancelScheduledValues(ac.currentTime);
-    boothGraph.gain.setTargetAtTime(boothOn ? 0.2 : 0.0001, ac.currentTime, boothOn ? 0.18 : 0.12);
-    if (listenBtn) {
-      listenBtn.classList.toggle('is-on', boothOn);
-      listenBtn.textContent = boothOn ? 'Listening.' : 'Listen';
+    if (boothOn) {
+      if (!boothAudio.getAttribute('src')) boothAudio.src = BOOTH_SRC;
+      boothAudio.volume = 0.85;
+      const play = boothAudio.play();
+      if (play && play.catch) {
+        play.catch(function () {
+          boothOn = false;
+          syncListenBtn();
+        });
+      }
+    } else {
+      boothAudio.pause();
     }
+    syncListenBtn();
   }
 
   window.spbxBooth = function (on) {
@@ -119,7 +81,6 @@
       if (typeof window.closeSeq === 'function') window.closeSeq();
       if (typeof window.closeStack === 'function') window.closeStack();
       if (typeof window.closeStems === 'function') window.closeStems();
-      setBoothPlaying(true);
     } else if (boothOn) {
       setBoothPlaying(false);
     }
@@ -204,5 +165,4 @@
     }
   });
 
-  if (document.body.classList.contains('is-booth')) setBoothPlaying(true);
 })();

@@ -8,9 +8,9 @@
   if (!overlay || !tray || !bedsRoot || !closeBtn) return;
 
   const BEDS = [
-    { id: 'gold', rgb: [184, 151, 58] },
-    { id: 'blue', rgb: [74, 127, 165] },
-    { id: 'ink', rgb: [36, 37, 40] }
+    { id: 'gold', name: 'Warmth' },
+    { id: 'blue', name: 'Air' },
+    { id: 'ink', name: 'Weight' }
   ];
 
   let open = false;
@@ -20,6 +20,7 @@
   let locked = {};
   let current = null;
   let drag = null;
+  let audition = false;
 
   function shuffle(list) {
     const next = list.slice();
@@ -70,76 +71,109 @@
     ink.connect(master);
 
     const warm = ac.createOscillator();
-    const warm2 = ac.createOscillator();
+    const warm3 = ac.createOscillator();
+    const warm5 = ac.createOscillator();
     const warmFilter = ac.createBiquadFilter();
+    const warmAmp = ac.createGain();
     warm.type = 'triangle';
-    warm2.type = 'triangle';
+    warm3.type = 'triangle';
+    warm5.type = 'sine';
     warm.frequency.value = 196;
-    warm2.frequency.value = 246.9;
+    warm3.frequency.value = 246.94;
+    warm5.frequency.value = 293.66;
     warmFilter.type = 'lowpass';
-    warmFilter.frequency.value = 620;
-    warmFilter.Q.value = 2.4;
+    warmFilter.frequency.value = 740;
+    warmFilter.Q.value = 1.6;
+    warmAmp.gain.value = 0.22;
     const warmLfo = ac.createOscillator();
     const warmLfoGain = ac.createGain();
-    warmLfo.frequency.value = 0.09;
-    warmLfoGain.gain.value = 140;
+    warmLfo.frequency.value = 0.08;
+    warmLfoGain.gain.value = 90;
     warmLfo.connect(warmLfoGain);
     warmLfoGain.connect(warmFilter.frequency);
     warm.connect(warmFilter);
-    warm2.connect(warmFilter);
-    warmFilter.connect(gold);
+    warm3.connect(warmFilter);
+    warm5.connect(warmFilter);
+    warmFilter.connect(warmAmp);
+    warmAmp.connect(gold);
 
     const air = ac.createOscillator();
     const air2 = ac.createOscillator();
-    const airGain = ac.createGain();
+    const airFilter = ac.createBiquadFilter();
+    const airAmp = ac.createGain();
     const delay = ac.createDelay();
     const delayGain = ac.createGain();
     air.type = 'sine';
     air2.type = 'sine';
-    air.frequency.value = 784;
-    air2.frequency.value = 1174.7;
-    airGain.gain.value = 0.7;
-    delay.delayTime.value = 0.32;
-    delayGain.gain.value = 0.4;
-    air.connect(airGain);
-    air2.connect(airGain);
-    airGain.connect(delay);
+    air.frequency.value = 587.33;
+    air2.frequency.value = 784;
+    airFilter.type = 'highpass';
+    airFilter.frequency.value = 420;
+    airAmp.gain.value = 0.09;
+    delay.delayTime.value = 0.36;
+    delayGain.gain.value = 0.42;
+    air.connect(airFilter);
+    air2.connect(airFilter);
+    airFilter.connect(airAmp);
+    airAmp.connect(delay);
     delay.connect(delayGain);
+    delayGain.connect(delay);
     delayGain.connect(blue);
-    airGain.connect(blue);
+    airAmp.connect(blue);
 
     const sub = ac.createOscillator();
-    const sub2 = ac.createOscillator();
-    sub.type = 'sine';
-    sub2.type = 'sine';
-    sub.frequency.value = 49;
-    sub2.frequency.value = 73.4;
+    const sub5 = ac.createOscillator();
     const subFilter = ac.createBiquadFilter();
+    const inkAmp = ac.createGain();
+    sub.type = 'sine';
+    sub5.type = 'sine';
+    sub.frequency.value = 49;
+    sub5.frequency.value = 73.42;
     subFilter.type = 'lowpass';
-    subFilter.frequency.value = 120;
+    subFilter.frequency.value = 130;
+    inkAmp.gain.value = 0.15;
+    const pulse = ac.createOscillator();
+    const pulseGain = ac.createGain();
+    pulse.frequency.value = 1.4;
+    pulseGain.gain.value = 0.11;
+    pulse.connect(pulseGain);
+    pulseGain.connect(inkAmp.gain);
     sub.connect(subFilter);
-    sub2.connect(subFilter);
-    subFilter.connect(ink);
+    sub5.connect(subFilter);
+    subFilter.connect(inkAmp);
+    inkAmp.connect(ink);
 
-    [warm, warm2, warmLfo, air, air2, sub, sub2].forEach((osc) => osc.start());
+    [warm, warm3, warm5, warmLfo, air, air2, sub, sub5, pulse].forEach((osc) => osc.start());
     return { master, stems: { gold, blue, ink } };
   }
 
-  function mixFor(solo) {
+  function mixFor() {
     if (!graph || !audio) return;
     const done = Object.keys(locked).length === 3;
     BEDS.forEach((bed) => {
       let val = 0.0001;
-      if (done) val = 0.2;
-      else if (solo === bed.id) val = 0.32;
-      graph.stems[bed.id].gain.setTargetAtTime(val, audio.currentTime, 0.05);
+      if (done) val = 0.22;
+      else if (locked[bed.id]) val = 0.16;
+      if (audition && current === bed.id) val = 0.36;
+      graph.stems[bed.id].gain.setTargetAtTime(val, audio.currentTime, 0.06);
     });
   }
 
   function fadeMaster(on) {
     if (!graph || !audio) return;
     graph.master.gain.cancelScheduledValues(audio.currentTime);
-    graph.master.gain.setTargetAtTime(on ? 0.24 : 0.0001, audio.currentTime, on ? 0.1 : 0.08);
+    graph.master.gain.setTargetAtTime(on ? 0.26 : 0.0001, audio.currentTime, on ? 0.12 : 0.08);
+  }
+
+  function hearCurrent() {
+    if (!current || locked[current]) return;
+    const ac = ensureAudio();
+    if (ac && !graph) graph = buildGraph(ac);
+    audition = true;
+    fadeMaster(true);
+    mixFor();
+    if (Object.keys(locked).length) msgEl.textContent = 'Now this one.';
+    else msgEl.textContent = 'Warmth, air, or weight.';
   }
 
   function render() {
@@ -150,8 +184,8 @@
       chip.type = 'button';
       chip.className = 'stem-chip';
       chip.dataset.stem = current;
-      chip.setAttribute('aria-label', 'Playing stem');
-      chip.innerHTML = '<span class="stem-chip-mark"></span>';
+      chip.setAttribute('aria-label', 'Stem. Hold to hear.');
+      chip.innerHTML = '<span class="stem-chip-bars" aria-hidden="true"><i></i><i></i><i></i></span>';
       tray.appendChild(chip);
       bindChip(chip);
     }
@@ -160,8 +194,8 @@
       el.type = 'button';
       el.className = 'stem-bed' + (locked[bed.id] ? ' is-locked' : '');
       el.dataset.bed = bed.id;
-      el.setAttribute('aria-label', bed.id);
-      el.innerHTML = '<span class="stem-bed-face"></span>';
+      el.setAttribute('aria-label', bed.name);
+      el.innerHTML = '<span class="stem-bed-face"></span><span class="stem-bed-name">' + bed.name + '</span>';
       el.addEventListener('click', () => {
         if (!current || locked[bed.id] || drag) return;
         place(current, bed.id);
@@ -174,23 +208,23 @@
     if (!open || !stemId || locked[bedId]) return;
     if (bedId !== stemId) {
       tone(70, 0.28, 0.05, 'sine');
-      msgEl.textContent = 'Not that face.';
-      mixFor(current);
+      msgEl.textContent = 'Different stem.';
+      hearCurrent();
       return;
     }
     locked[stemId] = true;
-    tone(bedId === 'gold' ? 196 : bedId === 'blue' ? 294 : 98, 0.28, 0.06, 'triangle');
+    audition = false;
     const next = queue.find((id) => !locked[id]) || null;
     current = next;
     if (!next) {
-      mixFor(null);
+      mixFor();
       tone(196, 0.42, 0.06, 'triangle');
       tone(247, 0.42, 0.04, 'sine');
       tone(330, 0.5, 0.05, 'sine');
       msgEl.textContent = 'The bed.';
     } else {
-      msgEl.textContent = 'Which face?';
-      mixFor(current);
+      msgEl.textContent = 'In. Next stem.';
+      mixFor();
     }
     render();
   }
@@ -203,7 +237,7 @@
       return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     });
     if (!bed) {
-      mixFor(current);
+      mixFor();
       return;
     }
     place(stemId, bed.id);
@@ -214,9 +248,7 @@
       if (e.button && e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
-      ensureAudio();
-      fadeMaster(true);
-      mixFor(chip.dataset.stem);
+      hearCurrent();
       const ghost = chip.cloneNode(true);
       ghost.classList.add('is-drag');
       ghost.style.width = chip.offsetWidth + 'px';
@@ -227,11 +259,12 @@
       const shiftY = chip.offsetHeight / 2;
       ghost.style.left = (e.clientX - shiftX) + 'px';
       ghost.style.top = (e.clientY - shiftY) + 'px';
-      drag = { stemId: chip.dataset.stem, ghost, chip, shiftX, shiftY };
+      drag = { stemId: chip.dataset.stem, ghost, chip, shiftX, shiftY, moved: false };
       try { chip.setPointerCapture(e.pointerId); } catch (err) {}
 
       function move(ev) {
         if (!drag) return;
+        if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 6) drag.moved = true;
         drag.ghost.style.left = (ev.clientX - drag.shiftX) + 'px';
         drag.ghost.style.top = (ev.clientY - drag.shiftY) + 'px';
         bedsRoot.querySelectorAll('.stem-bed').forEach((el) => {
@@ -250,7 +283,7 @@
         held.ghost.remove();
         held.chip.classList.remove('is-origin');
         bedsRoot.querySelectorAll('.stem-bed').forEach((el) => el.classList.remove('is-over'));
-        dropAt(held.stemId, ev.clientX, ev.clientY);
+        if (held.moved) dropAt(held.stemId, ev.clientX, ev.clientY);
       }
       chip.addEventListener('pointermove', move);
       chip.addEventListener('pointerup', up);
@@ -263,9 +296,10 @@
     locked = {};
     current = queue[0];
     drag = null;
-    msgEl.textContent = 'Which face?';
+    audition = false;
+    msgEl.textContent = 'Hold the stem. Find its face.';
     render();
-    mixFor(current);
+    mixFor();
   }
 
   function openStems() {
@@ -275,13 +309,14 @@
     open = true;
     const ac = ensureAudio();
     if (ac && !graph) graph = buildGraph(ac);
-    fadeMaster(true);
+    fadeMaster(false);
     reset();
   }
 
   function closeStems() {
     overlay.classList.remove('open');
     open = false;
+    audition = false;
     if (drag) {
       drag.ghost.remove();
       drag = null;
