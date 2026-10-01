@@ -797,31 +797,41 @@
     body {
       height: 100%;
       min-height: 100svh;
-      padding-top: 204px;
-      padding-bottom: 20px;
+      padding: 0;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
     }
     .brand {
-      position: fixed;
-      top: 88px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: static;
+      top: auto;
+      left: auto;
+      transform: none;
+    }
+    .brand img {
+      width: min(220px, 58vw);
     }
     .nav-dot-left { left: 16px; }
     .nav-dot-right { right: 16px; }
     .chamber {
-      flex: 1 1 auto;
+      flex: 0 1 auto;
       width: 100%;
       min-height: 0;
       height: auto;
-      justify-content: space-evenly;
-      padding: 0 28px;
+      justify-content: center;
+      gap: 28px;
+      padding: max(28px, env(safe-area-inset-top)) 28px max(28px, env(safe-area-inset-bottom));
     }
-    .headline { font-size: clamp(30px, 9vw, 42px); margin-bottom: 16px; }
+    .headline { font-size: clamp(30px, 9vw, 42px); margin-bottom: 14px; }
     .manifesto { font-size: 15px; margin-bottom: 8px; }
-    .position { font-size: 9px; margin-bottom: 22px; }
+    .position {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      line-height: 1.7;
+      max-width: 26em;
+      margin-bottom: 18px;
+    }
+    .cta-row { gap: 22px; }
     .sculpture { margin-bottom: 0; flex-shrink: 0; }
     body.is-reel .spin-cube { --s: 196px; }
     body.is-reel .cube-grab { width: 250px; height: 250px; touch-action: pan-y; }
