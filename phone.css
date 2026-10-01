@@ -17,7 +17,7 @@ html.is-phone body {
   height: 100svh !important;
   max-height: 100svh !important;
   min-height: 0 !important;
-  padding: 12px 0 64px !important;
+  padding: 62px 0 64px !important;
 }
 html.is-phone .brand {
   position: static !important;
