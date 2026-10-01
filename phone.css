@@ -17,14 +17,14 @@ html.is-phone body {
   height: 100svh !important;
   max-height: 100svh !important;
   min-height: 0 !important;
-  padding: 10px 0 72px !important;
+  padding: 12px 0 64px !important;
 }
 html.is-phone .brand {
   position: static !important;
   top: auto !important;
   left: auto !important;
   transform: none !important;
-  margin-bottom: 36px !important;
+  margin-bottom: 52px !important;
 }
 html.is-phone .brand img {
   width: min(236px, 64vw) !important;
@@ -40,15 +40,15 @@ html.is-phone .chamber {
 }
 html.is-phone .sculpture {
   margin-top: 0 !important;
-  margin-bottom: 22px !important;
+  margin-bottom: 28px !important;
 }
 html.is-phone .cube-grab {
-  width: 140px !important;
-  height: 140px !important;
+  width: 148px !important;
+  height: 148px !important;
 }
 html.is-phone .halo {
-  width: 180px !important;
-  height: 180px !important;
+  width: 188px !important;
+  height: 188px !important;
 }
 html.is-phone .deck {
   min-height: 0 !important;
@@ -56,12 +56,12 @@ html.is-phone .deck {
 }
 html.is-phone .headline {
   font-size: clamp(30px, 9vw, 40px) !important;
-  margin-bottom: 12px !important;
+  margin-bottom: 16px !important;
 }
 html.is-phone .position {
   animation: none !important;
   opacity: 1 !important;
-  margin-bottom: 18px !important;
+  margin-bottom: 20px !important;
 }
 html.is-phone .cta-row {
   animation: none !important;
