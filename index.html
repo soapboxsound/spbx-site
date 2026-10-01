@@ -18,7 +18,7 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="phone.css?v=20261001e" />
+<link rel="stylesheet" href="phone.css?v=20261001f" />
 <title>SPBX Sound | Be Seen. Be Heard. Be Understood.</title>
 <meta name="description" content="Be Seen. Be Heard. Be Understood. Sound with intention. Music supervision, development and vibe curation for brands and agencies." />
 <meta property="og:title" content="SPBX Sound | Be Seen. Be Heard. Be Understood." />
@@ -834,11 +834,10 @@
     #spectrum {
       top: 0;
       right: 0;
-      bottom: auto;
+      bottom: 0;
       left: 0;
       width: 100%;
-      height: 100lvh;
-      min-height: 100%;
+      height: 100%;
     }
     .brand {
       position: static;
@@ -1479,15 +1478,9 @@ if (cubeGrab) {
 function resize() {
   const vv = window.visualViewport;
   const w = Math.max(1, Math.round(vv?.width || window.innerWidth));
-  const visH = Math.max(1, Math.round(vv?.height || window.innerHeight));
-  const h = Math.max(
-    visH,
-    Math.round(canvas.getBoundingClientRect().height || 0),
-    Math.round(window.innerHeight || 0)
-  );
+  const h = Math.max(1, Math.round(vv?.height || window.innerHeight));
   canvas.width = w;
   canvas.height = h;
-  canvas.dataset.visH = String(visH);
   rippleCanvas.width = w;
   rippleCanvas.height = h;
 }
@@ -1586,11 +1579,9 @@ function drawStage(getVal) {
   tickHits();
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  const phone = document.documentElement.classList.contains('is-phone');
-  const visH = Number(canvas.dataset.visH) || H;
-  const rows = phone ? 18 : 14, cols = 44;
+  const rows = 14, cols = 44;
   const vanishX = W / 2;
-  const horizon = phone ? visH * 0.55 : H * 0.74;
+  const horizon = H * 0.74;
   const nearY = H;
   const c = wash();
   let energy = 0;

@@ -68,5 +68,10 @@ html.is-phone .cta-row {
   opacity: 1 !important;
 }
 html.is-phone #spectrum {
-  height: 100lvh !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
