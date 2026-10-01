@@ -69,9 +69,9 @@ html.is-phone .cta-row {
 }
 html.is-phone #spectrum {
   top: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
   left: 0 !important;
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
 }
