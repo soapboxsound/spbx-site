@@ -1,0 +1,72 @@
+html.is-phone,
+html.is-phone body {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-top: 0 !important;
+  overflow: hidden !important;
+}
+html.is-phone {
+  display: block !important;
+  padding: 0 !important;
+  height: 100svh !important;
+  max-height: 100svh !important;
+}
+html.is-phone body {
+  height: 100svh !important;
+  max-height: 100svh !important;
+  min-height: 0 !important;
+  padding: 10px 0 72px !important;
+}
+html.is-phone .brand {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin-bottom: 36px !important;
+}
+html.is-phone .brand img {
+  width: min(236px, 64vw) !important;
+}
+html.is-phone .chamber {
+  flex: 0 1 auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  padding: 0 16px !important;
+}
+html.is-phone .sculpture {
+  margin-top: 0 !important;
+  margin-bottom: 22px !important;
+}
+html.is-phone .cube-grab {
+  width: 140px !important;
+  height: 140px !important;
+}
+html.is-phone .halo {
+  width: 180px !important;
+  height: 180px !important;
+}
+html.is-phone .deck {
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+}
+html.is-phone .headline {
+  font-size: clamp(30px, 9vw, 40px) !important;
+  margin-bottom: 12px !important;
+}
+html.is-phone .position {
+  animation: none !important;
+  opacity: 1 !important;
+  margin-bottom: 18px !important;
+}
+html.is-phone .cta-row {
+  animation: none !important;
+  opacity: 1 !important;
+}
+html.is-phone #spectrum {
+  height: 100lvh !important;
+}

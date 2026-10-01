@@ -4,6 +4,21 @@
 <meta charset="UTF-8" />
 <meta name="theme-color" content="#0D0D0D" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<script>
+(function () {
+  var q = window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)');
+  function apply() {
+    document.documentElement.classList.toggle('is-phone', q.matches);
+  }
+  apply();
+  if (q.addEventListener) q.addEventListener('change', apply);
+  else if (q.addListener) q.addListener(apply);
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) window.location.reload();
+  });
+})();
+</script>
+<link rel="stylesheet" href="phone.css?v=20261001d" />
 <title>SPBX Sound | Be Seen. Be Heard. Be Understood.</title>
 <meta name="description" content="Be Seen. Be Heard. Be Understood. Sound with intention. Music supervision, development and vibe curation for brands and agencies." />
 <meta property="og:title" content="SPBX Sound | Be Seen. Be Heard. Be Understood." />
@@ -799,7 +814,7 @@
     transition: opacity 0.25s;
   }
   .nav-dot:hover .nav-dot-label { opacity: 0.9; }
-  @media (max-width: 500px) {
+  @media (max-width: 900px) {
     html {
       display: block;
       padding: 0;
