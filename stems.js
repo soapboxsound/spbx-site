@@ -1,37 +1,47 @@
 (function () {
-  const overlay = document.getElementById('stemOverlay');
-  const panel = document.getElementById('stemPanel');
-  const tray = document.getElementById('stemTray');
-  const bedsRoot = document.getElementById('stemBeds');
-  const closeBtn = document.getElementById('stemClose');
-  const msgEl = document.getElementById('stemMsg');
-  if (!overlay || !tray || !bedsRoot || !closeBtn) return;
+  const msgEl = document.getElementById('stemLexicon');
+  const listEl = document.getElementById('stemOnList');
+  const noteEl = document.getElementById('stemNote');
+  if (!msgEl) return;
 
-  const BEDS = [
-    { id: 'gold', name: 'Warmth' },
-    { id: 'blue', name: 'Air' },
-    { id: 'ink', name: 'Weight' }
+  // One bed. Each pad is a treatment of that bed, not a separate volume.
+  // Later: a looping file in stems-private/ can replace the synth via BED_SRC.
+  const BED_SRC = '';
+  const STEMS = [
+    { id: 'warmth', face: 'top', word: 'Warmth', note: 'Rounder, darker, more analog. The harmonic body.' },
+    { id: 'bite', face: 'bottom', word: 'Bite', note: 'Brighter, sharper, more attack. Teeth in the track.' },
+    { id: 'air', face: 'front', word: 'Air', note: 'Farther away. Space and shimmer on top.' },
+    { id: 'close', face: 'back', word: 'Close', note: 'Near-mic. Dry, present, in the room with you.' },
+    { id: 'weight', face: 'right', word: 'Weight', note: 'Heavier. Sub, chest, the floor of the mix.' },
+    { id: 'pulse', face: 'left', word: 'Pulse', note: 'The heartbeat. Same music, now it moves in time.' }
   ];
+
+  const FACE_CLASS = {
+    top: 'cf-top',
+    bottom: 'cf-bottom',
+    front: 'cf-front',
+    back: 'cf-back',
+    right: 'cf-right',
+    left: 'cf-left'
+  };
+
+  const BPM = 90;
+  const SIXTEENTH = 60 / BPM / 4;
 
   let open = false;
   let audio;
   let graph = null;
-  let queue = [];
-  let locked = {};
-  let current = null;
-  let drag = null;
-  let audition = false;
-
-  function shuffle(list) {
-    const next = list.slice();
-    for (let i = next.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const t = next[i];
-      next[i] = next[j];
-      next[j] = t;
-    }
-    return next;
-  }
+  let clockTimer = 0;
+  let nextTime = 0;
+  let step = 0;
+  let lastSay = '';
+  let masterOn = false;
+  let faderStem = null;
+  let faderStartY = 0;
+  let faderStartA = 0;
+  let faderMoved = false;
+  const amount = {};
+  STEMS.forEach((stem) => { amount[stem.id] = 0; });
 
   function ensureAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -41,301 +51,383 @@
     return audio;
   }
 
-  function tone(freq, dur, gain, type) {
-    const ac = ensureAudio();
-    if (!ac) return;
-    const t = ac.currentTime;
-    const osc = ac.createOscillator();
+  function makeGain(ac, dest, value) {
     const g = ac.createGain();
-    osc.type = type || 'triangle';
-    osc.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g);
-    g.connect(ac.destination);
-    osc.start(t);
-    osc.stop(t + dur + 0.02);
+    g.gain.value = value == null ? 0.0001 : value;
+    if (dest) g.connect(dest);
+    return g;
   }
 
-  function buildGraph(ac) {
-    const master = ac.createGain();
-    master.gain.value = 0.0001;
-    master.connect(ac.destination);
+  function shaperCurve(drive) {
+    const n = 256;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1;
+      curve[i] = Math.tanh(x * drive);
+    }
+    return curve;
+  }
 
-    const gold = ac.createGain();
-    const blue = ac.createGain();
-    const ink = ac.createGain();
-    gold.connect(master);
-    blue.connect(master);
-    ink.connect(master);
+  function buildBed(ac, dest) {
+    if (BED_SRC) {
+      const el = new Audio(BED_SRC);
+      el.loop = true;
+      el.preload = 'auto';
+      const src = ac.createMediaElementSource(el);
+      src.connect(dest);
+      return el;
+    }
+    const oscs = [];
+    function osc(type, freq) {
+      const o = ac.createOscillator();
+      o.type = type;
+      o.frequency.value = freq;
+      oscs.push(o);
+      return o;
+    }
+    const filt = ac.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 1400;
+    filt.Q.value = 0.8;
+    osc('triangle', 196).connect(filt);
+    osc('sine', 233.08).connect(filt);
+    osc('sine', 293.66).connect(filt);
+    osc('triangle', 392).connect(filt);
+    filt.connect(dest);
+    oscs.forEach((o) => o.start());
+    return null;
+  }
 
-    const warm = ac.createOscillator();
-    const warm3 = ac.createOscillator();
-    const warm5 = ac.createOscillator();
-    const warmFilter = ac.createBiquadFilter();
-    const warmAmp = ac.createGain();
-    warm.type = 'triangle';
-    warm3.type = 'triangle';
-    warm5.type = 'sine';
-    warm.frequency.value = 196;
-    warm3.frequency.value = 246.94;
-    warm5.frequency.value = 293.66;
-    warmFilter.type = 'lowpass';
-    warmFilter.frequency.value = 740;
-    warmFilter.Q.value = 1.6;
-    warmAmp.gain.value = 0.22;
-    const warmLfo = ac.createOscillator();
-    const warmLfoGain = ac.createGain();
-    warmLfo.frequency.value = 0.08;
-    warmLfoGain.gain.value = 90;
-    warmLfo.connect(warmLfoGain);
-    warmLfoGain.connect(warmFilter.frequency);
-    warm.connect(warmFilter);
-    warm3.connect(warmFilter);
-    warm5.connect(warmFilter);
-    warmFilter.connect(warmAmp);
-    warmAmp.connect(gold);
+  function buildTreatments(ac, bed, master) {
+    const pulseGate = makeGain(ac, master, 1);
+    bed.connect(pulseGate);
 
-    const air = ac.createOscillator();
-    const air2 = ac.createOscillator();
-    const airFilter = ac.createBiquadFilter();
-    const airAmp = ac.createGain();
-    const delay = ac.createDelay();
-    const delayGain = ac.createGain();
-    air.type = 'sine';
-    air2.type = 'sine';
-    air.frequency.value = 587.33;
-    air2.frequency.value = 784;
-    airFilter.type = 'highpass';
-    airFilter.frequency.value = 420;
-    airAmp.gain.value = 0.09;
-    delay.delayTime.value = 0.36;
-    delayGain.gain.value = 0.42;
-    air.connect(airFilter);
-    air2.connect(airFilter);
-    airFilter.connect(airAmp);
-    airAmp.connect(delay);
-    delay.connect(delayGain);
-    delayGain.connect(delay);
-    delayGain.connect(blue);
-    airAmp.connect(blue);
+    const dry = makeGain(ac, master, 0.34);
+    pulseGate.connect(dry);
+
+    const warmSh = ac.createWaveShaper();
+    const warmFilt = ac.createBiquadFilter();
+    const warmGain = makeGain(ac, master, 0.0001);
+    warmSh.curve = shaperCurve(2.4);
+    warmFilt.type = 'lowpass';
+    warmFilt.frequency.value = 3800;
+    warmFilt.Q.value = 0.9;
+    pulseGate.connect(warmSh);
+    warmSh.connect(warmFilt);
+    warmFilt.connect(warmGain);
+
+    const biteSh = ac.createWaveShaper();
+    const biteHip = ac.createBiquadFilter();
+    const bitePeak = ac.createBiquadFilter();
+    const biteGain = makeGain(ac, master, 0.0001);
+    biteSh.curve = shaperCurve(6.5);
+    biteHip.type = 'highpass';
+    biteHip.frequency.value = 400;
+    bitePeak.type = 'peaking';
+    bitePeak.frequency.value = 3200;
+    bitePeak.Q.value = 1.4;
+    bitePeak.gain.value = 0;
+    pulseGate.connect(biteSh);
+    biteSh.connect(biteHip);
+    biteHip.connect(bitePeak);
+    bitePeak.connect(biteGain);
+
+    const airHip = ac.createBiquadFilter();
+    const airDelay = ac.createDelay();
+    const airFb = makeGain(ac, airDelay, 0.42);
+    const airGain = makeGain(ac, master, 0.0001);
+    airHip.type = 'highpass';
+    airHip.frequency.value = 1600;
+    airDelay.delayTime.value = 0.38;
+    pulseGate.connect(airHip);
+    airHip.connect(airGain);
+    airGain.connect(airDelay);
+    airDelay.connect(airFb);
+    airDelay.connect(master);
+
+    const closePeak = ac.createBiquadFilter();
+    const closeGain = makeGain(ac, master, 0.0001);
+    closePeak.type = 'peaking';
+    closePeak.frequency.value = 1250;
+    closePeak.Q.value = 1.2;
+    closePeak.gain.value = 0;
+    pulseGate.connect(closePeak);
+    closePeak.connect(closeGain);
+
+    const weightShelf = ac.createBiquadFilter();
+    const weightGain = makeGain(ac, master, 1);
+    weightShelf.type = 'lowshelf';
+    weightShelf.frequency.value = 110;
+    weightShelf.gain.value = 0;
+    pulseGate.connect(weightShelf);
+    weightShelf.connect(weightGain);
 
     const sub = ac.createOscillator();
-    const sub5 = ac.createOscillator();
-    const subFilter = ac.createBiquadFilter();
-    const inkAmp = ac.createGain();
+    const subGain = makeGain(ac, master, 0.0001);
     sub.type = 'sine';
-    sub5.type = 'sine';
     sub.frequency.value = 49;
-    sub5.frequency.value = 73.42;
-    subFilter.type = 'lowpass';
-    subFilter.frequency.value = 130;
-    inkAmp.gain.value = 0.15;
-    const pulse = ac.createOscillator();
-    const pulseGain = ac.createGain();
-    pulse.frequency.value = 1.4;
-    pulseGain.gain.value = 0.11;
-    pulse.connect(pulseGain);
-    pulseGain.connect(inkAmp.gain);
-    sub.connect(subFilter);
-    sub5.connect(subFilter);
-    subFilter.connect(inkAmp);
-    inkAmp.connect(ink);
+    sub.connect(subGain);
+    sub.start();
 
-    [warm, warm3, warm5, warmLfo, air, air2, sub, sub5, pulse].forEach((osc) => osc.start());
-    return { master, stems: { gold, blue, ink } };
+    return {
+      pulseGate: pulseGate,
+      dry: dry,
+      warmth: { gain: warmGain, filt: warmFilt },
+      bite: { gain: biteGain, hip: biteHip, peak: bitePeak },
+      air: { gain: airGain },
+      close: { gain: closeGain, peak: closePeak },
+      weight: { shelf: weightShelf, sub: subGain }
+    };
   }
 
-  function mixFor() {
-    if (!graph || !audio) return;
-    const done = Object.keys(locked).length === 3;
-    BEDS.forEach((bed) => {
-      let val = 0.0001;
-      if (done) val = 0.22;
-      else if (locked[bed.id]) val = 0.16;
-      if (audition && current === bed.id) val = 0.36;
-      graph.stems[bed.id].gain.setTargetAtTime(val, audio.currentTime, 0.06);
-    });
+  function scheduleStep(t, s) {
+    if (!graph || !graph.fx) return;
+    const depth = amount.pulse;
+    let openAmt = 1;
+    if (s === 0 || s === 8) openAmt = 1;
+    else if (s === 4 || s === 12) openAmt = 0.52;
+    else openAmt = 0.16;
+    const val = Math.max(0.0001, 1 - depth * (1 - openAmt));
+    graph.fx.pulseGate.gain.setValueAtTime(val, t);
+  }
+
+  function scheduler() {
+    if (!open || !audio || !graph) return;
+    const horizon = audio.currentTime + 0.12;
+    while (nextTime < horizon) {
+      scheduleStep(nextTime, step);
+      nextTime += SIXTEENTH;
+      step = (step + 1) % 16;
+    }
+  }
+
+  function ensureClock() {
+    if (!open || !audio || audio.state !== 'running' || clockTimer) return;
+    if (!nextTime) nextTime = audio.currentTime + 0.04;
+    scheduler();
+    clockTimer = window.setInterval(scheduler, 25);
+  }
+
+  function stopClock() {
+    if (clockTimer) window.clearInterval(clockTimer);
+    clockTimer = 0;
+    nextTime = 0;
+    step = 0;
+  }
+
+  function ensureGraph() {
+    const ac = ensureAudio();
+    if (!ac) return null;
+    if (graph) return graph;
+    const master = ac.createGain();
+    master.gain.value = 0.0001;
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -14;
+    comp.knee.value = 12;
+    comp.ratio.value = 2.4;
+    comp.attack.value = 0.02;
+    comp.release.value = 0.22;
+    master.connect(comp);
+    comp.connect(ac.destination);
+
+    const bed = makeGain(ac, null, 0.62);
+    const file = buildBed(ac, bed);
+    const fx = buildTreatments(ac, bed, master);
+    graph = { master: master, bed: bed, fx: fx, file: file };
+    return graph;
   }
 
   function fadeMaster(on) {
     if (!graph || !audio) return;
+    const want = !!on;
+    if (want === masterOn) return;
+    masterOn = want;
     graph.master.gain.cancelScheduledValues(audio.currentTime);
-    graph.master.gain.setTargetAtTime(on ? 0.26 : 0.0001, audio.currentTime, on ? 0.12 : 0.08);
+    graph.master.gain.setTargetAtTime(want ? 0.9 : 0.0001, audio.currentTime, want ? 0.08 : 0.12);
   }
 
-  function hearCurrent() {
-    if (!current || locked[current]) return;
+  function faceEl(stem) {
+    return document.querySelector('.' + FACE_CLASS[stem.face]);
+  }
+
+  function mix() {
+    if (!graph || !audio || !graph.fx) return;
+    const t = audio.currentTime;
+    const a = amount;
+    const fx = graph.fx;
+    fx.dry.gain.setTargetAtTime(Math.max(0.08, 0.3 + a.close * 0.1 - a.air * 0.12), t, 0.05);
+    fx.warmth.gain.gain.setTargetAtTime(Math.max(0.0001, a.warmth * 0.72), t, 0.05);
+    fx.warmth.filt.frequency.setTargetAtTime(4000 - a.warmth * 3200, t, 0.08);
+    fx.bite.gain.gain.setTargetAtTime(Math.max(0.0001, a.bite * 0.58), t, 0.05);
+    fx.bite.hip.frequency.setTargetAtTime(220 + a.bite * 1400, t, 0.05);
+    fx.bite.peak.gain.setTargetAtTime(a.bite * 11, t, 0.05);
+    fx.air.gain.gain.setTargetAtTime(Math.max(0.0001, a.air * (1 - a.close * 0.7) * 0.7), t, 0.05);
+    fx.close.gain.gain.setTargetAtTime(Math.max(0.0001, a.close * 0.6), t, 0.05);
+    fx.close.peak.gain.setTargetAtTime(a.close * 9, t, 0.05);
+    fx.weight.shelf.gain.setTargetAtTime(a.weight * 13, t, 0.05);
+    fx.weight.sub.gain.setTargetAtTime(Math.max(0.0001, a.weight * 0.48), t, 0.05);
+    fadeMaster(open);
+    if (open) ensureClock();
+  }
+
+  function paint() {
+    STEMS.forEach((stem) => {
+      const el = faceEl(stem);
+      if (!el) return;
+      const a = amount[stem.id];
+      el.classList.toggle('is-stem', a > 0.08);
+      el.style.setProperty('--stem', a.toFixed(3));
+      if (!open) {
+        el.style.removeProperty('--stem');
+        el.style.opacity = '';
+      }
+    });
+    if (listEl) {
+      const words = STEMS
+        .filter((stem) => amount[stem.id] > 0.08)
+        .sort((a, b) => amount[b.id] - amount[a.id])
+        .map((stem) => stem.word);
+      listEl.textContent = words.join('  ·  ');
+    }
+  }
+
+  function idleCopy() {
+    say('Same music.');
+    if (noteEl) noteEl.textContent = 'Each word is a treatment. Tap Warmth, then Bite.';
+  }
+
+  function explain(stem) {
+    say(stem.word + '.');
+    if (noteEl) noteEl.textContent = stem.note;
+  }
+
+  function say(text) {
+    if (text === lastSay) return;
+    lastSay = text;
+    msgEl.textContent = text;
+  }
+
+  function sayBlend() {
+    const ranked = STEMS
+      .map((stem) => ({ stem: stem, a: amount[stem.id] }))
+      .filter((row) => row.a > 0.08)
+      .sort((a, b) => b.a - a.a);
+    if (!ranked.length) {
+      idleCopy();
+      return;
+    }
+    if (faderStem) {
+      explain(faderStem);
+      return;
+    }
+    say(ranked.slice(0, 3).map((row) => row.stem.word).join(' · '));
+    if (noteEl) noteEl.textContent = ranked[0].stem.note;
+  }
+
+  function setAmount(stem, value) {
+    amount[stem.id] = Math.max(0, Math.min(1, value));
+    mix();
+    paint();
+  }
+
+  function startFiles() {
+    if (!graph || !graph.file) return;
+    const play = graph.file.play();
+    if (play && play.catch) play.catch(function () {});
+  }
+
+  function stopFiles() {
+    if (!graph || !graph.file) return;
+    graph.file.pause();
+  }
+
+  function armAudio() {
     const ac = ensureAudio();
-    if (ac && !graph) graph = buildGraph(ac);
-    audition = true;
-    fadeMaster(true);
-    mixFor();
-    if (Object.keys(locked).length) msgEl.textContent = 'Now this one.';
-    else msgEl.textContent = 'Warmth, air, or weight.';
-  }
-
-  function render() {
-    tray.innerHTML = '';
-    bedsRoot.innerHTML = '';
-    if (current) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'stem-chip';
-      chip.dataset.stem = current;
-      chip.setAttribute('aria-label', 'Stem. Hold to hear.');
-      chip.innerHTML = '<span class="stem-chip-bars" aria-hidden="true"><i></i><i></i><i></i></span>';
-      tray.appendChild(chip);
-      bindChip(chip);
-    }
-    BEDS.forEach((bed) => {
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'stem-bed' + (locked[bed.id] ? ' is-locked' : '');
-      el.dataset.bed = bed.id;
-      el.setAttribute('aria-label', bed.name);
-      el.innerHTML = '<span class="stem-bed-face"></span><span class="stem-bed-name">' + bed.name + '</span>';
-      el.addEventListener('click', () => {
-        if (!current || locked[bed.id] || drag) return;
-        place(current, bed.id);
-      });
-      bedsRoot.appendChild(el);
-    });
-  }
-
-  function place(stemId, bedId) {
-    if (!open || !stemId || locked[bedId]) return;
-    if (bedId !== stemId) {
-      tone(70, 0.28, 0.05, 'sine');
-      msgEl.textContent = 'Different stem.';
-      hearCurrent();
-      return;
-    }
-    locked[stemId] = true;
-    audition = false;
-    const next = queue.find((id) => !locked[id]) || null;
-    current = next;
-    if (!next) {
-      mixFor();
-      tone(196, 0.42, 0.06, 'triangle');
-      tone(247, 0.42, 0.04, 'sine');
-      tone(330, 0.5, 0.05, 'sine');
-      msgEl.textContent = 'The bed.';
-    } else {
-      msgEl.textContent = 'In. Next stem.';
-      mixFor();
-    }
-    render();
-  }
-
-  function dropAt(stemId, x, y) {
-    const bed = BEDS.find((item) => {
-      const el = bedsRoot.querySelector('[data-bed="' + item.id + '"]');
-      if (!el) return false;
-      const r = el.getBoundingClientRect();
-      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-    });
-    if (!bed) {
-      mixFor();
-      return;
-    }
-    place(stemId, bed.id);
-  }
-
-  function bindChip(chip) {
-    chip.addEventListener('pointerdown', (e) => {
-      if (e.button && e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      hearCurrent();
-      const ghost = chip.cloneNode(true);
-      ghost.classList.add('is-drag');
-      ghost.style.width = chip.offsetWidth + 'px';
-      ghost.style.height = chip.offsetHeight + 'px';
-      document.body.appendChild(ghost);
-      chip.classList.add('is-origin');
-      const shiftX = chip.offsetWidth / 2;
-      const shiftY = chip.offsetHeight / 2;
-      ghost.style.left = (e.clientX - shiftX) + 'px';
-      ghost.style.top = (e.clientY - shiftY) + 'px';
-      drag = { stemId: chip.dataset.stem, ghost, chip, shiftX, shiftY, moved: false };
-      try { chip.setPointerCapture(e.pointerId); } catch (err) {}
-
-      function move(ev) {
-        if (!drag) return;
-        if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 6) drag.moved = true;
-        drag.ghost.style.left = (ev.clientX - drag.shiftX) + 'px';
-        drag.ghost.style.top = (ev.clientY - drag.shiftY) + 'px';
-        bedsRoot.querySelectorAll('.stem-bed').forEach((el) => {
-          const r = el.getBoundingClientRect();
-          const over = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-          el.classList.toggle('is-over', over && !el.classList.contains('is-locked'));
-        });
-      }
-      function up(ev) {
-        chip.removeEventListener('pointermove', move);
-        chip.removeEventListener('pointerup', up);
-        chip.removeEventListener('pointercancel', up);
-        if (!drag) return;
-        const held = drag;
-        drag = null;
-        held.ghost.remove();
-        held.chip.classList.remove('is-origin');
-        bedsRoot.querySelectorAll('.stem-bed').forEach((el) => el.classList.remove('is-over'));
-        if (held.moved) dropAt(held.stemId, ev.clientX, ev.clientY);
-      }
-      chip.addEventListener('pointermove', move);
-      chip.addEventListener('pointerup', up);
-      chip.addEventListener('pointercancel', up);
-    });
-  }
-
-  function reset() {
-    queue = shuffle(BEDS.map((bed) => bed.id));
-    locked = {};
-    current = queue[0];
-    drag = null;
-    audition = false;
-    msgEl.textContent = 'Hold the stem. Find its face.';
-    render();
-    mixFor();
+    if (!ac) return;
+    if (!graph) ensureGraph();
+    startFiles();
+    mix();
   }
 
   function openStems() {
     if (typeof window.closeSeq === 'function') window.closeSeq();
     if (typeof window.closeStack === 'function') window.closeStack();
-    overlay.classList.add('open');
+    STEMS.forEach((stem) => { amount[stem.id] = 0; });
     open = true;
-    const ac = ensureAudio();
-    if (ac && !graph) graph = buildGraph(ac);
+    lastSay = '';
+    document.body.classList.add('is-stems');
+    const cube = document.querySelector('[data-cube]');
+    if (cube) cube.style.transform = '';
+    idleCopy();
+    paint();
+    ensureGraph();
     fadeMaster(false);
-    reset();
   }
 
   function closeStems() {
-    overlay.classList.remove('open');
+    if (!open) return;
     open = false;
-    audition = false;
-    if (drag) {
-      drag.ghost.remove();
-      drag = null;
-    }
-    document.querySelectorAll('.stem-chip.is-drag').forEach((n) => n.remove());
+    faderStem = null;
+    STEMS.forEach((stem) => { amount[stem.id] = 0; });
+    document.body.classList.remove('is-stems');
+    stopClock();
+    paint();
+    mix();
+    stopFiles();
     fadeMaster(false);
+    masterOn = false;
+    lastSay = '';
+    idleCopy();
   }
 
   window.openStems = openStems;
   window.closeStems = closeStems;
+  window.spbxStemFace = function () {};
 
-  closeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeStems();
-  });
-  if (panel) {
-    panel.addEventListener('pointerdown', () => ensureAudio());
-  }
   window.addEventListener('keydown', (e) => {
     if (open && e.key === 'Escape') closeStems();
+  });
+
+  const brand = document.querySelector('.brand');
+  if (brand) {
+    brand.addEventListener('click', () => {
+      if (open) closeStems();
+    });
+  }
+
+  STEMS.forEach((stem) => {
+    const el = faceEl(stem);
+    if (!el) return;
+    el.addEventListener('pointerdown', (e) => {
+      if (!open) return;
+      e.preventDefault();
+      e.stopPropagation();
+      armAudio();
+      faderStem = stem;
+      faderStartY = e.clientY;
+      faderStartA = amount[stem.id];
+      faderMoved = false;
+      explain(stem);
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!open || faderStem !== stem) return;
+      const dy = e.clientY - faderStartY;
+      if (Math.abs(dy) < 6) return;
+      faderMoved = true;
+      const h = el.getBoundingClientRect().height || 88;
+      setAmount(stem, faderStartA - dy / h);
+      explain(stem);
+    });
+    function endFader() {
+      if (faderStem !== stem) return;
+      if (!faderMoved && faderStartA < 0.12) setAmount(stem, 0.8);
+      faderStem = null;
+      faderMoved = false;
+      if (amount[stem.id] > 0.08) explain(stem);
+      else sayBlend();
+    }
+    el.addEventListener('pointerup', endFader);
+    el.addEventListener('pointercancel', endFader);
   });
 })();

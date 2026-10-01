@@ -53,6 +53,13 @@
     return faces[0].key;
   };
 
+  window.spbxFacingStemFace = function () {
+    const vis = window.spbxStemVis();
+    const faces = Object.keys(vis).map((key) => ({ key: key, z: vis[key] }));
+    faces.sort((a, b) => b.z - a.z);
+    return faces[0].key;
+  };
+
   window.spbxFaceVis = function () {
     const rx = window.spbxPose.rx;
     const ry = window.spbxPose.ry;
@@ -61,6 +68,19 @@
       right: visZ(1, 0, 0, rx, ry),
       back: visZ(0, 0, -1, rx, ry),
       left: visZ(-1, 0, 0, rx, ry)
+    };
+  };
+
+  window.spbxStemVis = function () {
+    const rx = window.spbxPose.rx;
+    const ry = window.spbxPose.ry;
+    return {
+      front: visZ(0, 0, 1, rx, ry),
+      right: visZ(1, 0, 0, rx, ry),
+      back: visZ(0, 0, -1, rx, ry),
+      left: visZ(-1, 0, 0, rx, ry),
+      top: visZ(0, -1, 0, rx, ry),
+      bottom: visZ(0, 1, 0, rx, ry)
     };
   };
 
@@ -76,7 +96,7 @@
   };
 
   window.spbxSpin = function (dx, dy) {
-    if (!cubes.length) return;
+    if (!cubes.length || document.body.classList.contains('is-stems')) return;
     boost[0] += dx * 0.62;
     dragVel += dx * 0.045;
     if (typeof dy === 'number' && !document.body.classList.contains('is-reel')) {
@@ -139,7 +159,12 @@
     const t = (now - t0) / 1000;
     const dragging = !!window.spbxDragging;
 
+    const stems = document.body.classList.contains('is-stems');
     cubes.forEach((el, i) => {
+      if (stems) {
+        if (el.style.transform) el.style.transform = '';
+        return;
+      }
       if (!reduce) {
         cubeY[i] += parseFloat(el.dataset.speed || '0.4') + dragVel;
         cubeX[i] += xVel[i];

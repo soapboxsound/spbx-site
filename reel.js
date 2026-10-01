@@ -708,7 +708,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (!live) return;
-    if (document.querySelector('.game-overlay.open, .seq-overlay.open, .stem-overlay.open')) return;
+    if (document.querySelector('.game-overlay.open, .seq-overlay.open') || document.body.classList.contains('is-stems')) return;
     if (e.key === 'Escape' && framed) {
       e.preventDefault();
       closeFrame();

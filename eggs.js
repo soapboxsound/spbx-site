@@ -113,7 +113,11 @@
       if (typeof window.spbxReelFace === 'function') window.spbxReelFace(el);
       return;
     }
-    if (document.querySelector('.game-overlay.open, .seq-overlay.open, .stem-overlay.open')) return;
+    if (document.body.classList.contains('is-stems')) {
+      if (typeof window.spbxStemFace === 'function') window.spbxStemFace(el);
+      return;
+    }
+    if (document.querySelector('.game-overlay.open, .seq-overlay.open')) return;
     const color = faceFrom(el);
     if (!color) return;
     const expect = ORDER[seq.length];

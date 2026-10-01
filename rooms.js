@@ -32,6 +32,7 @@
   }
 
   function go(next) {
+    if (typeof window.closeStems === 'function') window.closeStems();
     if (!views[next] || next === current) {
       syncChrome(next);
       return;
@@ -78,11 +79,15 @@
     document.title = titles[room] || titles.home;
     document.body.classList.toggle('is-booth', room === 'booth');
     document.body.classList.toggle('is-work', room === 'work');
+    document.querySelectorAll('.cta-row [data-room]').forEach((el) => {
+      el.classList.toggle('is-here', el.getAttribute('data-room') === room);
+    });
     if (typeof window.spbxBooth === 'function') window.spbxBooth(room === 'booth');
     if (typeof window.spbxReel === 'function') window.spbxReel(room === 'work');
   }
 
   function setRoom(room) {
+    if (typeof window.closeStems === 'function') window.closeStems();
     const hash = '#' + room;
     if (location.hash !== hash) location.hash = hash;
     else go(room);
