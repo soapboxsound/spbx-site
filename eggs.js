@@ -117,7 +117,7 @@
       if (typeof window.spbxStemFace === 'function') window.spbxStemFace(el);
       return;
     }
-    if (document.querySelector('.game-overlay.open, .seq-overlay.open')) return;
+    if (document.body.classList.contains('is-seq') || document.body.classList.contains('is-stack')) return;
     const color = faceFrom(el);
     if (!color) return;
     const expect = ORDER[seq.length];
@@ -143,9 +143,6 @@
       sculpture.classList.add('is-lit');
       window.setTimeout(() => sculpture.classList.remove('is-lit'), 1800);
     }
-    window.setTimeout(() => {
-      if (typeof window.openStems === 'function') window.openStems();
-    }, 720);
   };
 
   document.addEventListener('keydown', (e) => {

@@ -1,13 +1,10 @@
 (function () {
-  const overlay = document.getElementById('gameOverlay');
   const panel = document.getElementById('gamePanel');
   const canvas = document.getElementById('gameCanvas');
-  const trigger = document.getElementById('gameTrigger');
-  const closeBtn = document.getElementById('gameClose');
   const scoreEl = document.getElementById('gameScore');
   const bestEl = document.getElementById('gameBest');
   const msgEl = document.getElementById('gameMsg');
-  if (!overlay || !canvas || !trigger) return;
+  if (!panel || !canvas) return;
 
   const ctx = canvas.getContext('2d');
   const GOLD = [184, 151, 58];
@@ -264,9 +261,12 @@
   }
 
   function openStack() {
+    if (open) {
+      requestAnimationFrame(() => sizeCanvas());
+      return;
+    }
     if (typeof window.closeSeq === 'function') window.closeSeq();
     if (typeof window.closeStems === 'function') window.closeStems();
-    overlay.classList.add('open');
     open = true;
     reset();
     cancelAnimationFrame(raf);
@@ -277,7 +277,7 @@
   }
 
   function closeStack() {
-    overlay.classList.remove('open');
+    if (!open) return;
     open = false;
     alive = false;
     cancelAnimationFrame(raf);
@@ -285,18 +285,12 @@
 
   window.openStack = openStack;
   window.closeStack = closeStack;
+  window.spbxStack = function (on) {
+    if (on) openStack();
+    else closeStack();
+  };
 
-  trigger.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    ensureAudio();
-    openStack();
-  });
-  closeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeStack();
-  });
   panel.addEventListener('pointerdown', (e) => {
-    if (e.target === closeBtn || closeBtn.contains(e.target)) return;
     e.preventDefault();
     ensureAudio();
     place();
@@ -312,4 +306,8 @@
   window.addEventListener('resize', () => {
     if (open) sizeCanvas();
   });
+
+  if (document.body.classList.contains('is-stack') || location.hash === '#stack') {
+    openStack();
+  }
 })();

@@ -2,22 +2,29 @@
   const views = {
     home: document.getElementById('view-home'),
     about: document.getElementById('view-about'),
+    services: document.getElementById('view-services'),
     contact: document.getElementById('view-contact'),
     booth: document.getElementById('view-booth'),
-    work: document.getElementById('view-work')
+    work: document.getElementById('view-work'),
+    seq: document.getElementById('view-seq'),
+    stack: document.getElementById('view-stack')
   };
-  if (!views.home || !views.about || !views.contact || !views.booth || !views.work) return;
+  if (!views.home || !views.about || !views.services || !views.contact || !views.booth || !views.work || !views.seq || !views.stack) return;
 
-  const order = { about: 0, home: 1, contact: 2 };
+  const order = { about: 0, services: 1, home: 2, contact: 3, seq: 4, stack: 5 };
   const titles = {
     home: 'SPBX Sound | Be Seen. Be Heard. Be Understood.',
     about: 'About | SPBX Sound',
+    services: 'Services | SPBX Sound',
     contact: 'Contact | SPBX Sound',
     booth: 'The Booth | SPBX Sound',
-    work: 'The Work | SPBX Sound'
+    work: 'The Work | SPBX Sound',
+    seq: '808 Sequencer | SPBX Sound',
+    stack: 'Stack | SPBX Sound'
   };
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SHOWCASE_READY = document.body.getAttribute('data-showcase') === 'on';
+  const LIFT_ROOMS = { about: true, services: true, contact: true, seq: true, stack: true };
 
   let current = null;
   let first = true;
@@ -75,15 +82,44 @@
     });
   }
 
+  function poseSculpture(room) {
+    const sculpt = document.querySelector('.sculpture');
+    const brand = document.querySelector('.brand');
+    const root = document.documentElement;
+    if (!sculpt || !brand) return;
+    if (!LIFT_ROOMS[room]) {
+      root.style.setProperty('--cube-lift', '0px');
+      return;
+    }
+    const currentLift = parseFloat(getComputedStyle(root).getPropertyValue('--cube-lift')) || 0;
+    const brandBox = brand.getBoundingClientRect();
+    const cubeBox = sculpt.getBoundingClientRect();
+    const restCenter = cubeBox.top - currentLift + cubeBox.height / 2;
+    const target = brandBox.top + brandBox.height * 0.55;
+    const nextLift = Math.round(target - restCenter) + 'px';
+    if (root.style.getPropertyValue('--cube-lift') !== nextLift) {
+      root.style.setProperty('--cube-lift', nextLift);
+    }
+  }
+
   function syncChrome(room) {
     document.title = titles[room] || titles.home;
+    document.body.classList.toggle('is-cube-up', !!LIFT_ROOMS[room]);
+    document.body.classList.toggle('is-about', room === 'about');
     document.body.classList.toggle('is-booth', room === 'booth');
     document.body.classList.toggle('is-work', room === 'work');
-    document.querySelectorAll('.cta-row [data-room]').forEach((el) => {
+    document.body.classList.toggle('is-seq', room === 'seq');
+    document.body.classList.toggle('is-stack', room === 'stack');
+    document.querySelectorAll('.site-bar [data-room]').forEach((el) => {
       el.classList.toggle('is-here', el.getAttribute('data-room') === room);
     });
     if (typeof window.spbxBooth === 'function') window.spbxBooth(room === 'booth');
     if (typeof window.spbxReel === 'function') window.spbxReel(room === 'work');
+    if (typeof window.spbxSeq === 'function') window.spbxSeq(room === 'seq');
+    if (typeof window.spbxStack === 'function') window.spbxStack(room === 'stack');
+    window.requestAnimationFrame(function () {
+      poseSculpture(room);
+    });
   }
 
   function setRoom(room) {
@@ -119,6 +155,9 @@
 
   window.spbxRoom = setRoom;
 
+  window.addEventListener('resize', function () {
+    if (LIFT_ROOMS[current]) poseSculpture(current);
+  });
   window.addEventListener('hashchange', () => go(roomFromHash()));
   go(roomFromHash());
 })();

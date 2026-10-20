@@ -17,14 +17,21 @@ html.is-phone body {
   height: 100svh !important;
   max-height: 100svh !important;
   min-height: 0 !important;
-  padding: 62px 0 64px !important;
+  padding: 62px 0 108px !important;
 }
 html.is-phone .brand {
-  position: static !important;
+  position: relative !important;
   top: auto !important;
   left: auto !important;
   transform: none !important;
   margin-bottom: 52px !important;
+  z-index: 12 !important;
+}
+html.is-phone body.is-cube-up .brand {
+  margin-bottom: 6px !important;
+}
+html.is-phone body.is-cube-up .sculpture {
+  margin-bottom: 4px !important;
 }
 html.is-phone .brand img {
   width: min(236px, 64vw) !important;
@@ -64,8 +71,110 @@ html.is-phone .position {
   margin-bottom: 20px !important;
 }
 html.is-phone .cta-row {
-  animation: none !important;
-  opacity: 1 !important;
+  gap: 16px !important;
+}
+html.is-phone .cta {
+  font-size: 9px !important;
+  letter-spacing: 0.12em !important;
+}
+html.is-phone .about-lead {
+  font-size: 13px !important;
+  margin-bottom: 12px !important;
+  max-width: none !important;
+}
+html.is-phone #view-about .about-kicker {
+  font-size: clamp(22px, 7vw, 30px) !important;
+  margin-bottom: 12px !important;
+}
+html.is-phone #view-about .about-lead {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  margin-bottom: 12px !important;
+}
+html.is-phone .about-close {
+  font-size: 18px !important;
+  margin-top: 8px !important;
+}
+html.is-phone .mail-note {
+  margin-top: 0 !important;
+  margin-bottom: 16px !important;
+  font-size: 14px !important;
+}
+html.is-phone body.is-about .chamber,
+html.is-phone body.is-seq .chamber,
+html.is-phone body.is-stack .chamber {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+html.is-phone body.is-about .deck,
+html.is-phone body.is-seq .deck,
+html.is-phone body.is-stack .deck {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
+html.is-phone body.is-about #view-about.is-on,
+html.is-phone body.is-seq #view-seq.is-on,
+html.is-phone body.is-stack #view-stack.is-on {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start !important;
+}
+html.is-phone .svc-list { gap: 5px !important; }
+html.is-phone .svc-list li {
+  font-size: 9px !important;
+  letter-spacing: 0.12em !important;
+}
+html.is-phone .site-bar {
+  padding: 20px 12px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  gap: 4px !important;
+}
+html.is-phone body.is-seq,
+html.is-phone body.is-stack {
+  padding-bottom: 132px !important;
+}
+html.is-phone .pattern-btns {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 6px !important;
+  margin-bottom: 14px !important;
+}
+html.is-phone .pat-btn {
+  width: 100% !important;
+  text-align: center !important;
+  font-size: 7.5px !important;
+  padding: 9px 4px !important;
+}
+html.is-phone .seq-pad {
+  height: 22px !important;
+}
+html.is-phone .seq-controls {
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-top: 14px !important;
+  padding-top: 12px !important;
+}
+html.is-phone .seq-btn {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+html.is-phone .seq-bpm-wrap {
+  margin-left: 0 !important;
+  width: 100% !important;
+  justify-content: center !important;
+}
+html.is-phone .play-row {
+  gap: 22px !important;
+}
+html.is-phone .mic-btn {
+  bottom: 102px !important;
+  right: 16px !important;
 }
 html.is-phone #spectrum {
   top: 0 !important;
