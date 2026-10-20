@@ -18,7 +18,7 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="phone.css?v=20261020i" />
+<link rel="stylesheet" href="phone.css?v=20261020n" />
 <title>SPBX Sound | Be Seen. Be Heard. Be Understood.</title>
 <meta name="description" content="Be Seen. Be Heard. Be Understood. Sound with intention. Music supervision, development and vibe curation for brands and agencies." />
 <meta property="og:title" content="SPBX Sound | Be Seen. Be Heard. Be Understood." />
@@ -51,6 +51,11 @@
     --wash-b: 165;
     --mix: 0.55;
     --cube-lift: 0px;
+  }
+  @property --cube-lift {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 0px;
   }
   html, body {
     width: 100%; height: 100vh;
@@ -113,9 +118,6 @@
     animation: fadeIn 1.2s ease both;
     transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
                 margin-bottom 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  body.is-cube-up .sculpture {
-    margin-bottom: -72px;
   }
   body.is-cube-up .halo { opacity: 0.32; }
   @property --s {
@@ -903,6 +905,8 @@
     html:has(body.is-cube-up) {
       height: auto;
       overflow-y: auto;
+      padding-top: 0;
+      padding-bottom: 0;
     }
     body.is-cube-up {
       height: auto;
@@ -2225,7 +2229,7 @@ document.addEventListener('keydown', e => {
 
 </script>
 <script src="world.js?v=reel12"></script>
-<script src="rooms.js?v=lex10"></script>
+<script src="rooms.js?v=lex18"></script>
 <script src="stack.js?v=5"></script>
 <script src="stems.js?v=12"></script>
 <script src="eggs.js?v=6"></script>

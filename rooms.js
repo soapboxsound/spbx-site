@@ -41,9 +41,11 @@
   function go(next) {
     if (typeof window.closeStems === 'function') window.closeStems();
     if (!views[next] || next === current) {
-      syncChrome(next);
+      syncChrome(next, false);
       return;
     }
+    const sculptNow = document.querySelector('.sculpture');
+    const fromTop = sculptNow ? sculptNow.getBoundingClientRect().top : 0;
     const prev = current;
     const dir = prev == null || order[next] == null || order[prev] == null
       ? 0
@@ -74,9 +76,10 @@
       incoming.classList.add('is-on');
     }
 
+    const allowFlip = !first && !reduce;
     current = next;
     first = false;
-    syncChrome(next);
+    syncChrome(next, allowFlip, fromTop);
     Object.keys(views).forEach((key) => {
       views[key].setAttribute('aria-hidden', key === next ? 'false' : 'true');
     });
@@ -102,7 +105,11 @@
     }
   }
 
-  function syncChrome(room) {
+  function syncChrome(room, allowFlip, fromTop) {
+    const sculpt = document.querySelector('.sculpture');
+    const root = document.documentElement;
+    const startTop = fromTop != null ? fromTop : (sculpt ? sculpt.getBoundingClientRect().top : 0);
+
     document.title = titles[room] || titles.home;
     document.body.classList.toggle('is-cube-up', !!LIFT_ROOMS[room]);
     document.body.classList.toggle('is-about', room === 'about');
@@ -117,6 +124,17 @@
     if (typeof window.spbxReel === 'function') window.spbxReel(room === 'work');
     if (typeof window.spbxSeq === 'function') window.spbxSeq(room === 'seq');
     if (typeof window.spbxStack === 'function') window.spbxStack(room === 'stack');
+
+    const flip = !!allowFlip && sculpt;
+    if (flip) {
+      sculpt.style.transition = 'none';
+      root.style.setProperty('--cube-lift', '0px');
+      void document.body.offsetHeight;
+      const restTop = sculpt.getBoundingClientRect().top;
+      root.style.setProperty('--cube-lift', Math.round(startTop - restTop) + 'px');
+      void sculpt.offsetWidth;
+      sculpt.style.removeProperty('transition');
+    }
     window.requestAnimationFrame(function () {
       poseSculpture(room);
     });

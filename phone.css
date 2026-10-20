@@ -28,10 +28,18 @@ html.is-phone .brand {
   z-index: 12 !important;
 }
 html.is-phone body.is-cube-up .brand {
-  margin-bottom: 6px !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin-bottom: 0 !important;
+  z-index: 12 !important;
+}
+html.is-phone body.is-cube-up .chamber {
+  position: relative !important;
 }
 html.is-phone body.is-cube-up .sculpture {
-  margin-bottom: 4px !important;
+  margin-bottom: 16px !important;
 }
 html.is-phone .brand img {
   width: min(236px, 64vw) !important;
@@ -78,22 +86,23 @@ html.is-phone .cta {
   letter-spacing: 0.12em !important;
 }
 html.is-phone .about-lead {
-  font-size: 13px !important;
-  margin-bottom: 12px !important;
+  font-size: 16px !important;
+  margin-bottom: 16px !important;
   max-width: none !important;
 }
 html.is-phone #view-about .about-kicker {
-  font-size: clamp(22px, 7vw, 30px) !important;
-  margin-bottom: 12px !important;
+  font-size: clamp(30px, 8.5vw, 38px) !important;
+  max-width: none !important;
+  margin-bottom: 18px !important;
 }
 html.is-phone #view-about .about-lead {
-  font-size: 13px !important;
-  line-height: 1.45 !important;
-  margin-bottom: 12px !important;
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  margin-bottom: 16px !important;
 }
 html.is-phone .about-close {
-  font-size: 18px !important;
-  margin-top: 8px !important;
+  font-size: 22px !important;
+  margin-top: 16px !important;
 }
 html.is-phone .mail-note {
   margin-top: 0 !important;
@@ -105,7 +114,7 @@ html.is-phone body.is-seq .chamber,
 html.is-phone body.is-stack .chamber {
   flex: 1 1 auto !important;
   min-height: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 html.is-phone body.is-about .deck,
 html.is-phone body.is-seq .deck,
