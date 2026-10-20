@@ -135,10 +135,10 @@ html.is-phone body.is-stack #view-stack.is-on {
   -webkit-overflow-scrolling: touch;
   justify-content: flex-start !important;
 }
-html.is-phone .svc-list { gap: 5px !important; }
+html.is-phone .svc-list { gap: 10px !important; }
 html.is-phone .svc-list li {
-  font-size: 9px !important;
-  letter-spacing: 0.12em !important;
+  font-size: 13px !important;
+  letter-spacing: 0.14em !important;
 }
 html.is-phone .site-bar {
   padding: 20px 12px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
